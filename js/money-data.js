@@ -561,7 +561,7 @@
   // или null, если это не денежное уведомление (реклама, коды и т.п.).
   var PUSH_SKIP = /код\b|код подтвержд|пароль|никому не сообщ|отклонен|недостаточно|акци|предлож|скидк|розыгрыш|вход в приложени/i;
   var PUSH_IN = /пополнен|зачислен|поступлен|входящ|возврат|кэшб|кешб|проценты|начислен|получен|от\s+[А-ЯЁA-Z]/i;
-  var PUSH_OWN = /между (своими )?счетами|на копилк|в копилк|с копилк|из копилк|округлени|накопительн|на счет «|на счёт «/i;
+  var PUSH_OWN = /между (своими )?счетами|копилк|округлени|накоп|на счет «|на счёт «|вклад/i;
   function pushNumber(s) {
     var n = parseFloat(s.replace(/[\s  ]/g, '').replace(',', '.').replace('−', '-'));
     return isNaN(n) ? null : Math.abs(n);
@@ -583,7 +583,7 @@
     if (!desc) desc = action;
     var own = PUSH_OWN.test(text);
     var incoming = PUSH_IN.test(action || text) && !/^(покупк|оплат|списан|перевод\b(?! от))/i.test(action);
-    if (own) incoming = /с копилк|из копилк|со счета|со счёта/i.test(text);
+    if (own) incoming = /(^|\s)(с|из|со) (копилк|накоп|вклад|счет|счёт)|со счета|со счёта/i.test(text);
     var d = at ? new Date(at) : new Date();
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
     var op = {
