@@ -183,7 +183,20 @@ a { color: inherit; text-decoration: none; }
   border-radius: 50%;
   background: var(--text-3);
 }
-.sync-chip[data-state="cloud"] .dot { background: var(--accent); }
+.sync-chip[data-state="cloud"] .dot, .sync-chip[data-state="synced"] .dot { background: var(--accent); }
+.sync-chip[data-state="connecting"] .dot, .sync-chip[data-state="loading"] .dot { background: var(--warning); animation: cloud-pulse 1s ease-in-out infinite; }
+.sync-chip[data-state="offline"] .dot { background: var(--text-3); }
+.sync-chip[data-state="error"] .dot { background: var(--critical, #d03b3b); }
+.sync-chip[data-state="signed-out"] { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.sync-chip:not([data-state="off"]) { cursor: pointer; }
+.cloud-btn { position: relative; }
+.cloud-btn[hidden] { display: none; }
+.cloud-btn .cloud-dot { position: absolute; right: 6px; bottom: 6px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--surface); background: var(--text-3); }
+.cloud-btn[data-state="synced"] .cloud-dot { background: var(--accent); }
+.cloud-btn[data-state="connecting"] .cloud-dot, .cloud-btn[data-state="loading"] .cloud-dot { background: var(--warning); animation: cloud-pulse 1s ease-in-out infinite; }
+.cloud-btn[data-state="error"] .cloud-dot { background: var(--critical, #d03b3b); }
+.cloud-btn[data-state="signed-out"] .cloud-dot { background: var(--warning); }
+@keyframes cloud-pulse { 50% { opacity: .35; } }
 
 /* --- Компьютер: панель слева --- */
 @media (min-width: 860px) {

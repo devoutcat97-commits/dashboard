@@ -153,6 +153,24 @@
   var installPrompt = null;
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installPrompt = e; });
 
+  function cloudField() {
+    var C = window.Cloud;
+    var body;
+    if (!C || !C.configured) {
+      body = '<p class="field-hint">Облако ещё не подключено — данные только на этом устройстве.</p>';
+    } else if (!C.user()) {
+      body = '<p class="field-hint">Войди через Google — и данные будут одинаковыми на телефоне и компьютере. Без интернета всё работает как обычно и досинхронизируется потом.</p>' +
+        '<div class="btn-row"><button type="button" class="btn btn-primary" data-act="cloud-in">Войти через Google</button></div>';
+    } else {
+      var u = C.user();
+      body = '<p class="field-hint" data-hint="cloud">☁️ ' + U.esc(C.label()) + ' · ' + U.esc(u.email || u.name || '') +
+        (C.error() ? '<br>' + U.esc(C.error()) : '') + '</p>' +
+        '<div class="btn-row"><button type="button" class="btn" data-act="cloud-sync">Синхронизировать сейчас</button>' +
+        '<button type="button" class="btn" data-act="cloud-out">Выйти</button></div>';
+    }
+    return '<div class="field"><span class="field-label">Облако и синхронизация</span>' + body + '</div>';
+  }
+
   function openSettings() {
     var info = Tabs.study && Tabs.study.scheduleInfo ? Tabs.study.scheduleInfo() : null;
     var upd = info && info.updatedAt ? new Date(info.updatedAt) : null;
@@ -191,15 +209,17 @@
             '<div class="btn-row"><button type="button" class="btn" data-act="remind">' +
               (window.Reminders && Reminders.enabled() ? 'Выключить напоминания' : 'Включить напоминания') + '</button></div></div>' +
 
+          cloudField() +
+
           '<div class="field"><span class="field-label">Резервная копия всех данных</span>' +
-            '<p class="field-hint">Пока данные хранятся только в этом браузере. Время от времени скачивай копию — так ничего не потеряется. ' +
-              'Из копии можно перенести данные на другое устройство.</p>' +
+            '<p class="field-hint">' + (window.Cloud && Cloud.user() ? 'Данные хранятся в облаке и на устройствах. Копия-файл — дополнительная страховка.'
+              : 'Пока данные хранятся только в этом браузере. Время от времени скачивай копию — так ничего не потеряется. Из копии можно перенести данные на другое устройство.') + '</p>' +
             '<div class="btn-row"><button type="button" class="btn" data-act="export">Скачать копию</button>' +
             '<button type="button" class="btn" data-act="import">Загрузить из копии</button></div></div>' +
 
           '<div class="field"><span class="field-label">Расписание пар</span>' +
             '<p class="field-hint">' + (info ? 'Группа ' + U.esc(info.group) + ' · обновлено ' + U.esc(updText) + '. ' : '') +
-              'Расписание берётся с сайта alt.ranepa.ru. После выкладки на GitHub оно будет обновляться само раз в день.</p></div>' +
+              'Расписание берётся с сайта alt.ranepa.ru и обновляется само каждый день рано утром.</p></div>' +
 
           '<div class="field"><span class="field-label">На экран телефона</span>' +
             '<p class="field-hint">iPhone: открой дашборд в Safari → кнопка «Поделиться» → «На экран „Домой“». ' +
@@ -219,6 +239,9 @@
       if (e.target === dlg || e.target.closest('[data-close]')) { dlg.close(); return; }
       var act = e.target.closest('[data-act]');
       if (!act) return;
+      if (act.dataset.act === 'cloud-in' && window.Cloud) { Cloud.signIn(); dlg.close(); return; }
+      if (act.dataset.act === 'cloud-out' && window.Cloud) { Cloud.signOut(); dlg.close(); return; }
+      if (act.dataset.act === 'cloud-sync' && window.Cloud) { Cloud.syncNow(); return; }
       if (act.dataset.act === 'export') U.download('dashboard-backup-' + U.today() + '.json', Store.exportJSON());
       if (act.dataset.act === 'import') {
         U.pickFile('.json,application/json', function (text) {

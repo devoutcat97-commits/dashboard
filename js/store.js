@@ -14,6 +14,7 @@
 
   var KEY = 'dash:data:v1';
   var listeners = new Set();
+  var saveHooks = new Set();   // кто хочет знать о сохранениях на этом устройстве (облако)
   var data = load();
 
   function load() {
@@ -26,13 +27,18 @@
     }
   }
 
-  function save() {
+  function writeLocal() {
     try {
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch (e) {
       console.warn('Не удалось сохранить данные:', e);
     }
+  }
+
+  function save() {
+    writeLocal();
     notify();
+    saveHooks.forEach(function (fn) { try { fn(); } catch (e) { console.warn(e); } });
   }
 
   function notify() {
@@ -118,7 +124,18 @@
       if (!parsed || typeof parsed.data !== 'object') throw new Error('Это не файл копии дашборда');
       data = parsed.data;
       save();
-    }
+    },
+
+    // ---- Для облака (js/cloud.js) ----
+    _raw: function () { return data; },
+    // Заменить данные пришедшими из облака: сохраняем на устройстве и перерисовываем,
+    // но обратно в облако не отправляем.
+    _replace: function (next) {
+      data = next && typeof next === 'object' ? next : {};
+      writeLocal();
+      notify();
+    },
+    _onSave: function (fn) { saveHooks.add(fn); return function () { saveHooks.delete(fn); }; }
   };
 
   // Если дашборд открыт в двух вкладках браузера, держим их в согласии.
