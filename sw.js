@@ -6,7 +6,7 @@
    Так обновления приходят сразу, а без связи дашборд всё равно открывается.
    Данные (записи) и так хранятся в браузере, им интернет не нужен.
    ============================================================ */
-var CACHE = 'dashboard-v1';
+var CACHE = 'dashboard-v2';
 
 self.addEventListener('install', function (event) {
   self.skipWaiting();
@@ -50,4 +50,30 @@ self.addEventListener('fetch', function (event) {
         });
       })
   );
+});
+
+// ---------- Push-уведомления ----------
+// Сервер присылает { data: { title, body, url, tag } } через Firebase Cloud Messaging.
+self.addEventListener('push', function (event) {
+  var p = {};
+  try { p = event.data ? event.data.json() : {}; } catch (e) { p = { data: { title: 'Мой дашборд', body: event.data ? event.data.text() : '' } }; }
+  var d = p.data || p.notification || p;
+  event.waitUntil(self.registration.showNotification(d.title || 'Мой дашборд', {
+    body: d.body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    tag: d.tag || undefined,
+    data: { url: d.url || '#summary' }
+  }));
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var url = new URL((event.notification.data && event.notification.data.url) || '#summary', self.registration.scope).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].url.indexOf(self.registration.scope) === 0) { list[i].focus(); return list[i].navigate(url); }
+    }
+    return self.clients.openWindow(url);
+  }));
 });

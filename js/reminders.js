@@ -69,6 +69,7 @@
 
   function check() {
     if (!enabled()) return;
+    if (window.Push && Push.enabled()) return;   // напоминания уже приходят пушами с сервера — не дублируем
     var T = window.Tabs || {}, today = U.today();
 
     // Пары

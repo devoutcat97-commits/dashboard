@@ -171,6 +171,30 @@
     return '<div class="field"><span class="field-label">Облако и синхронизация</span>' + body + '</div>';
   }
 
+  // Автоперехват уведомлений банка: ссылка для MacroDroid (её кладёт в облако сервер).
+  function autoField() {
+    var C = window.Cloud;
+    if (!C || !C._uid || !C._uid()) return '';
+    return '<div class="field"><span class="field-label">Банк: автоматическая запись трат</span>' +
+      '<p class="field-hint" data-hint="hook">Загружаю…</p>' +
+      '<div class="btn-row" data-hook-btns hidden><button type="button" class="btn" data-act="hook-copy">Скопировать ссылку для MacroDroid</button></div></div>';
+  }
+  function fillAutoField(dlg) {
+    var C = window.Cloud, hint = dlg.querySelector('[data-hint="hook"]');
+    if (!hint) return;
+    C._db().collection('users').doc(C._uid()).collection('meta').doc('hook').get().then(function (d) {
+      var info = d.exists ? JSON.parse(d.data().json || '{}') : null;
+      var n = Tabs.money && Tabs.money.reviewCount ? Tabs.money.reviewCount() : 0;
+      if (info && info.url) {
+        dlg._hookUrl = info.url;
+        hint.textContent = 'Подключено: покупки из уведомлений Т-Банка записываются сами.' + (n ? ' Ждут разбора: ' + n + '.' : '') + ' Ссылку не показывай другим — по ней можно добавлять записи.';
+        dlg.querySelector('[data-hook-btns]').hidden = false;
+      } else {
+        hint.textContent = 'Сервер ещё не настроен. Id для настройки: ' + C._uid();
+      }
+    }).catch(function (e) { hint.textContent = 'Не получилось проверить: ' + e.message; });
+  }
+
   function openSettings() {
     var info = Tabs.study && Tabs.study.scheduleInfo ? Tabs.study.scheduleInfo() : null;
     var upd = info && info.updatedAt ? new Date(info.updatedAt) : null;
@@ -204,12 +228,19 @@
               U.esc(window.Weather ? Weather.cityName() : '') + '"><button type="button" class="btn" data-act="city">Сохранить</button></div>' +
             '<p class="field-hint" data-hint="city">Погода берётся с сервиса Open-Meteo, бесплатно и без регистрации.</p></div>' +
 
-          '<div class="field"><span class="field-label">Напоминания</span>' +
-            '<p class="field-hint" data-hint="remind">' + (window.Reminders ? Reminders.statusText() : '') + '</p>' +
-            '<div class="btn-row"><button type="button" class="btn" data-act="remind">' +
-              (window.Reminders && Reminders.enabled() ? 'Выключить напоминания' : 'Включить напоминания') + '</button></div></div>' +
+          (window.Push && window.CLOUD_CONFIG && CLOUD_CONFIG.vapidKey
+            ? '<div class="field"><span class="field-label">Push-уведомления</span>' +
+                '<p class="field-hint" data-hint="push">' + U.esc(Push.statusText()) + '</p>' +
+                '<div class="btn-row"><button type="button" class="btn' + (Push.enabled() ? '' : ' btn-primary') + '" data-act="push">' +
+                  (Push.enabled() ? 'Выключить на этом устройстве' : 'Включить на этом устройстве') + '</button>' +
+                  (Push.enabled() ? '<button type="button" class="btn" data-act="push-test">Проверить</button>' : '') + '</div></div>'
+            : '<div class="field"><span class="field-label">Напоминания</span>' +
+                '<p class="field-hint" data-hint="remind">' + (window.Reminders ? Reminders.statusText() : '') + '</p>' +
+                '<div class="btn-row"><button type="button" class="btn" data-act="remind">' +
+                  (window.Reminders && Reminders.enabled() ? 'Выключить напоминания' : 'Включить напоминания') + '</button></div></div>') +
 
           cloudField() +
+          autoField() +
 
           '<div class="field"><span class="field-label">Резервная копия всех данных</span>' +
             '<p class="field-hint">' + (window.Cloud && Cloud.user() ? 'Данные хранятся в облаке и на устройствах. Копия-файл — дополнительная страховка.'
@@ -239,6 +270,20 @@
       if (e.target === dlg || e.target.closest('[data-close]')) { dlg.close(); return; }
       var act = e.target.closest('[data-act]');
       if (!act) return;
+      if (act.dataset.act === 'push' && window.Push) {
+        var ph = dlg.querySelector('[data-hint="push"]');
+        ph.textContent = 'Подключаю…';
+        (Push.enabled() ? Push.disable() : Push.enable()).then(function () {
+          U.toast(Push.enabled() ? 'Push включены 🔔' : 'Push выключены на этом устройстве');
+          dlg.close();
+        }).catch(function (err) { ph.textContent = err.message; });
+        return;
+      }
+      if (act.dataset.act === 'hook-copy' && dlg._hookUrl) {
+        (navigator.clipboard ? navigator.clipboard.writeText(dlg._hookUrl) : Promise.reject()).then(function () { U.toast('Ссылка скопирована'); }, function () { prompt('Скопируй ссылку:', dlg._hookUrl); });
+        return;
+      }
+      if (act.dataset.act === 'push-test' && window.Push) { Push.test(); U.toast('Через минуту придёт проверочное уведомление'); return; }
       if (act.dataset.act === 'cloud-in' && window.Cloud) { Cloud.signIn(); dlg.close(); return; }
       if (act.dataset.act === 'cloud-out' && window.Cloud) { Cloud.signOut(); dlg.close(); return; }
       if (act.dataset.act === 'cloud-sync' && window.Cloud) { Cloud.syncNow(); return; }
@@ -274,6 +319,7 @@
     dlg.addEventListener('close', function () { dlg.remove(); });
     document.body.appendChild(dlg);
     dlg.showModal();
+    if (window.Cloud && Cloud._uid && Cloud._uid()) fillAutoField(dlg);
   }
   settingsBtn.addEventListener('click', openSettings);
 

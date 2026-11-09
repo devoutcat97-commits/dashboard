@@ -286,6 +286,7 @@
     var b = getBudget();
     return (
       freshnessHtml() +
+      reviewHtml() +
       (key === currentMonth() ? saveCardHtml() : '') +
       heroHtml(key, list, exp, b) +
       (key === currentMonth() ? weeklyCardHtml() + insightsHtml() : '') +
@@ -1515,6 +1516,88 @@
     );
   }
 
+  // ============================================================
+  //  Автоперехват: операции из уведомлений Т-Банка
+  // ============================================================
+  // items: [{ text, at }] — сырые уведомления, пришедшие с телефона через облако.
+  function processInbox(items) {
+    var A = getAccounts();
+    var regular = A.filter(function (a) { return a.kind !== 'piggy' && a.kind !== 'debt'; });
+    var card = (regular.find(function (a) { return /т-банк|тбанк|тинькофф|tbank/i.test(a.name); }) || regular[0] || {}).id;
+    var piggy = (A.find(function (a) { return a.kind === 'piggy'; }) || {}).id;
+    var learned = getLearned();
+    var recs = [], skipped = 0;
+    items.forEach(function (it) {
+      var op = MD.parseTBankPush(it.text, it.at);
+      if (!op) { skipped++; return; }
+      var base = { amount: Math.abs(op.amount), date: op.date, note: op.note, source: 'push', pushRaw: op.raw, bankDesc: op.description, pushTime: op.time };
+      if (op.own && piggy && card) {
+        recs.push(Object.assign(base, op.amount < 0
+          ? { type: 'transfer', account: card, to: piggy, category: '', sub: '' }
+          : { type: 'transfer', account: piggy, to: card, category: '', sub: '' }));
+        return;
+      }
+      var s = MD.suggestForBankOp(op, { learned: learned, accounts: A, account: card });
+      if (s.kind === 't') {
+        recs.push(Object.assign(base, op.amount < 0
+          ? { type: 'transfer', account: card, to: s.to, category: '', sub: '', review: s.review }
+          : { type: 'transfer', account: s.to, to: card, category: '', sub: '', review: s.review }));
+      } else {
+        recs.push(Object.assign(base, { type: s.type, category: s.category, sub: s.sub || '', account: card, to: '', review: !!s.review }));
+      }
+    });
+    if (!recs.length) return { added: 0, skipped: skipped };
+    var added = Store.addMany('transactions', recs);
+    var review = recs.filter(function (r) { return r.review; }).length;
+    var first = added[0];
+    U.toast(recs.length === 1
+      ? '💳 ' + (first.type === 'income' ? '+' : '−') + U.money(first.amount) + ' · ' + (first.note || '') + (first.review ? ' — проверь категорию' : '')
+      : '💳 Записано из уведомлений: ' + recs.length + (review ? ', разобрать: ' + review : ''));
+    recs.forEach(function (r) { if (r.type === 'expense') warnLater(r.category); });
+    added.forEach(function (r) { if (r.type === 'income') offerSave(r); });
+    return { added: recs.length, skipped: skipped };
+  }
+
+  function reviewList() {
+    return allTx().filter(function (t) { return t.review; }).sort(function (a, b) { return (b.date + (b.pushTime || '')).localeCompare(a.date + (a.pushTime || '')); });
+  }
+
+  // Карточка «Разобрать»: операции, где дашборд не уверен в категории.
+  function reviewHtml() {
+    var list = reviewList();
+    if (!list.length) return '';
+    var rows = list.slice(0, 8).map(function (t) {
+      return '<li class="plan-row">' + catIcon(t.category || 'other-exp') +
+        '<button type="button" class="plan-main" data-action="edit-tx" data-id="' + t.id + '"><span class="tx-title">' + esc(t.note || 'Операция') + '</span>' +
+          '<span class="tx-sub">' + U.dayShort(t.date).split(',')[0] + (t.pushTime ? ' ' + t.pushTime : '') + ' · ' + esc(t.type === 'transfer' ? 'перевод' : catFull(t.category, t.sub)) + '</span></button>' +
+        '<span class="plan-amt' + (t.type === 'income' ? ' tx-amt--income' : '') + '">' + (t.type === 'income' ? '+' : '−') + U.money(t.amount) + '</span>' +
+        '<button type="button" class="icon-btn" data-action="review-ok" data-id="' + t.id + '" aria-label="Категория верна" data-tip="Всё верно">' + I.check + '</button>' +
+      '</li>';
+    }).join('');
+    return (
+      '<section class="card review-card">' +
+        '<div class="card-head"><h2>🧾 Разобрать · ' + list.length + '</h2>' +
+          '<button type="button" class="btn btn-small" data-action="review-all">Всё верно</button></div>' +
+        '<p class="field-hint">Эти операции пришли из уведомлений банка, но дашборд не уверен в категории. Нажми на строку, чтобы поправить, — он запомнит выбор.</p>' +
+        '<ul class="plan-list">' + rows + '</ul>' +
+        (list.length > 8 ? '<p class="card-foot">и ещё ' + (list.length - 8) + '…</p>' : '') +
+      '</section>'
+    );
+  }
+
+  // Для импорта выписки: операция уже записана из уведомления? (та же сумма и направление, дата ±1 день)
+  function pushTwin(op, used) {
+    var amt = Math.abs(op.amount), sign = op.amount < 0;
+    var d0 = U.toDate(op.date).getTime();
+    return allTx().find(function (t) {
+      if (t.source !== 'push' || t.importKey || used[t.id]) return false;
+      if (Math.abs(t.amount - amt) > 0.009) return false;
+      var out = t.type === 'expense' || (t.type === 'transfer' && !isPiggy(t.account) && t.account !== 'cash');
+      if (out !== sign) return false;
+      return Math.abs(U.toDate(t.date).getTime() - d0) <= 864e5 * 1.5;
+    });
+  }
+
   // ---------- Предупреждение о лимитах ----------
   function limitWarning(category) {
     var key = currentMonth();
@@ -1761,6 +1844,18 @@
         txDialog(null, { type: 'expense', amount: Number(wi.price) || 0, note: wi.title });
         break;
       }
+      case 'review-ok': {
+        var rt = find('transactions', id);
+        if (rt) {
+          Store.update('transactions', id, { review: false });
+          if (rt.bankDesc && rt.type !== 'transfer') learn(rt.bankDesc, { type: rt.type, category: rt.category, sub: rt.sub || '' });
+        }
+        break;
+      }
+      case 'review-all':
+        reviewList().forEach(function (t) { Store.update('transactions', t.id, { review: false }); });
+        U.toast('Отмечено как разобранное');
+        break;
       case 'add-trip': tripDialog(); break;
       case 'edit-trip': tripDialog(find('trips', id)); break;
       case 'trend': state.trendCat = state.trendCat === id ? '' : id; rerender(); break;
@@ -1975,8 +2070,12 @@
           sub: transfer ? '' : (v.sub || ''),
           to: transfer ? v.to : ''
         };
-        if (editing) Store.update('transactions', tx.id, rec);
-        else {
+        if (editing) {
+          if (tx.review) rec.review = false;
+          Store.update('transactions', tx.id, rec);
+          // Разобранную операцию из уведомления запоминаем по её описанию из банка.
+          if (tx.review && tx.bankDesc && !transfer) learn(tx.bankDesc, { type: rec.type, category: rec.category, sub: rec.sub });
+        } else {
           var added = Store.add('transactions', rec);
           if (rec.type === 'income') offerSave(added);
         }
@@ -2369,11 +2468,15 @@
       var contract = MD.contractOf(op.description);
       return contract ? 'договор:' + contract : MD.norm(op.description) + (op.amount < 0 ? '|-' : '|+');
     }
+    var usedTwins = {};
     var rows = ops.map(function (op) {
       var s = MD.suggestForBankOp(op, { learned: learned, accounts: A, account: target });
       var key = choiceKey(s);
       var dup = !!existing[op.importKey];
-      return { op: op, choice: key, initial: key, review: s.review, checked: !dup, dup: dup, touched: false, group: groupKeyOf(op) };
+      // Уже пришла из уведомления — не дублируем, а только привяжем к выписке.
+      var twin = dup ? null : pushTwin(op, usedTwins);
+      if (twin) { usedTwins[twin.id] = true; dup = true; }
+      return { op: op, choice: key, initial: key, review: s.review, checked: !dup, dup: dup, twin: twin ? twin.id : '', touched: false, group: groupKeyOf(op) };
     });
 
     var dlg = document.createElement('dialog');
@@ -2383,7 +2486,7 @@
       var optNeg = choiceOptions(-1, target), optPos = choiceOptions(1, target);
       return rows.map(function (r, i) {
         var opts = (r.op.amount < 0 ? optNeg : optPos).replace('value="' + esc(r.choice) + '"', 'value="' + esc(r.choice) + '" selected');
-        var flag = r.dup ? '<span class="imp-flag">уже есть</span>' : r.review ? '<span class="imp-flag imp-flag--review">проверь категорию</span>' : '';
+        var flag = r.twin ? '<span class="imp-flag">уже есть из уведомления</span>' : r.dup ? '<span class="imp-flag">уже есть</span>' : r.review ? '<span class="imp-flag imp-flag--review">проверь категорию</span>' : '';
         return (
           '<div class="imp-row' + (r.dup ? ' is-dup' : '') + '" data-i="' + i + '">' +
             '<input type="checkbox" data-role="imp-check" aria-label="Импортировать"' + (r.checked ? ' checked' : '') + '>' +
@@ -2497,6 +2600,8 @@
         }
       });
       if (learnedChanged) Store.setSetting('money.learned', newLearned);
+      // Операции из уведомлений привязываем к выписке, чтобы при следующем импорте они тоже считались «уже есть».
+      rows.forEach(function (r) { if (r.twin) Store.update('transactions', r.twin, { importKey: r.op.importKey, bankCategory: r.op.bankCategory || '' }); });
       Store.addMany('transactions', recs);
       dlg.close();
       U.toast('Импортировано: ' + recs.length + ' ' + U.plural(recs.length, 'операция', 'операции', 'операций'));
@@ -2642,6 +2747,8 @@
     quickParse: quickParse, quickAdd: quickAdd, openTx: openTx, catFull: catFull, catEmoji: catEmoji, txTitle: txTitle, alerts: alerts,
     newTx: function (prefill) { txDialog(null, prefill); },
     weekly: weekly,
+    processInbox: processInbox,
+    reviewCount: function () { return reviewList().length; },
     offerSave: offerSave,
     importStatement: function () { importTBank(); }
   };

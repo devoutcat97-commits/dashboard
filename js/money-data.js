@@ -555,7 +555,54 @@
     return cat({ type: 'income', category: 'other-inc', sub: '' }, true);
   }
 
+  // ---------- Уведомления Т-Банка (автоперехват с телефона) ----------
+  // Примеры: «Покупка 450 ₽, Пятёрочка. Доступно 12 345 ₽», «Пополнение на 5 000 ₽ от Мария М.»,
+  // «Перевод 1 000 ₽ … », «Кэшбэк 120 ₽». Возвращает операцию как из выписки (сумма со знаком)
+  // или null, если это не денежное уведомление (реклама, коды и т.п.).
+  var PUSH_SKIP = /код\b|код подтвержд|пароль|никому не сообщ|отклонен|недостаточно|акци|предлож|скидк|розыгрыш|вход в приложени/i;
+  var PUSH_IN = /пополнен|зачислен|поступлен|входящ|возврат|кэшб|кешб|проценты|начислен|получен|от\s+[А-ЯЁA-Z]/i;
+  var PUSH_OWN = /между (своими )?счетами|на копилк|в копилк|с копилк|из копилк|округлени|накопительн|на счет «|на счёт «/i;
+  function pushNumber(s) {
+    var n = parseFloat(s.replace(/[\s  ]/g, '').replace(',', '.').replace('−', '-'));
+    return isNaN(n) ? null : Math.abs(n);
+  }
+  function parseTBankPush(raw, at) {
+    var text = String(raw || '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!text || PUSH_SKIP.test(text)) return null;
+    var re = /(\d[\d ]*(?:[.,]\d{1,2})?)\s*(?:₽|руб\.?|RUB|р\.)/i;
+    var m = text.match(re);
+    if (!m) return null;
+    var amount = pushNumber(m[1]);
+    if (!amount) return null;
+    var before = text.slice(0, m.index).replace(/^[^:]*:\s*/, ' ').trim();
+    var after = text.slice(m.index + m[0].length);
+    // Описание: то, что после суммы, до «Доступно/Баланс»; иначе — то, что перед суммой.
+    var desc = after.split(/(?:\.\s*)?(?:Доступно|Баланс|Остаток|Карта\s*\*|\*\d{4})/i)[0]
+      .replace(/^[\s,.:;—–-]+/, '').replace(/[\s,.;]+$/, '').trim();
+    var action = before.replace(/\b(на|в)\s*$/i, '').trim();
+    if (!desc) desc = action;
+    var own = PUSH_OWN.test(text);
+    var incoming = PUSH_IN.test(action || text) && !/^(покупк|оплат|списан|перевод\b(?! от))/i.test(action);
+    if (own) incoming = /с копилк|из копилк|со счета|со счёта/i.test(text);
+    var d = at ? new Date(at) : new Date();
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var op = {
+      date: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()),
+      time: pad(d.getHours()) + ':' + pad(d.getMinutes()),
+      amount: incoming ? amount : -amount,
+      description: own ? 'Перевод между своими счетами ' + desc : (action + ' ' + desc).trim(),
+      action: action,
+      bankCategory: /кэшб|кешб/i.test(text) ? 'Кэшбэк' : /процент/i.test(text) ? 'Проценты' : '',
+      mcc: '',
+      raw: text,
+      own: own
+    };
+    op.note = op.bankCategory || cleanDescription(desc) || action || 'Операция по карте';
+    return op;
+  }
+
   window.MoneyData = {
+    parseTBankPush: parseTBankPush,
     CATS: CATS,
     ACCOUNTS: ACCOUNTS,
     norm: norm,

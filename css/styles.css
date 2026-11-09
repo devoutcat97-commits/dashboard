@@ -2095,3 +2095,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Разобрать (операции из уведомлений) ---------- */
+.review-card { border-left: 3px solid var(--warning); }
+.review-card .plan-row .icon-btn { color: var(--good-text, var(--accent)); }
