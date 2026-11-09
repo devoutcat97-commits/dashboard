@@ -9,5 +9,7 @@ window.CLOUD_CONFIG = {
   projectId: 'dashboard-2948a',
   storageBucket: 'dashboard-2948a.firebasestorage.app',
   messagingSenderId: '701577605393',
-  appId: '1:701577605393:web:fa15de857a342431ec1cb0'
+  appId: '1:701577605393:web:fa15de857a342431ec1cb0',
+  // Публичный ключ для push-уведомлений (не секрет).
+  vapidKey: 'BLIF92wikGZHETlZr4ehtRd0x_6QKAFo-qZPUAYrnibkTNGAJ0sws8HdGr1fzOY3-JiKgXRbHt8rR7BW-rIJc2Q'
 };
