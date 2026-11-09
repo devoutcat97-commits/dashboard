@@ -96,6 +96,15 @@ def main():
         print("Не удалось загрузить ни одной недели — старый файл не трогаю.")
         sys.exit(1)
 
+    # Если пары не изменились — файл не трогаем (чтобы не делать пустых обновлений сайта).
+    try:
+        with open(OUT, encoding="utf-8") as f:
+            if json.load(f).get("weeks") == weeks:
+                print("Расписание не изменилось.")
+                return
+    except (OSError, ValueError):
+        pass
+
     data = {
         "group": GROUP,
         "source": f"{BASE}/shedule/{FORM}/group{GROUP}/",
