@@ -67,11 +67,16 @@ function doGet() { return text('Сервер дашборда работает')
 
 // ---------- 3. ИИ-чат (Gemini) ----------
 // Дашборд присылает: idToken (кто пишет), system (правила + сводка данных), messages (переписка).
-// Проверяем, что пишет именно владелец, и спрашиваем Gemini от имени этого Google-аккаунта —
-// ключ не нужен, VPN не нужен: запрос идёт с серверов Google.
+// Проверяем, что пишет именно владелец, и спрашиваем Gemini с ключом из свойства скрипта GEMINI_KEY
+// (создаётся в Google Cloud → «Учётные данные»). VPN не нужен: запрос идёт с серверов Google.
 var API_KEY = 'AIzaSyBpboHWJ6WXQi9bu1RHphYv5lpcmJmFHVo';   // публичный ключ Firebase (только для проверки входа)
 var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
 
+function geminiUrl(model) {
+  var key = props().getProperty('GEMINI_KEY');
+  if (!key) throw new Error('Не задан ключ GEMINI_KEY в свойствах скрипта');
+  return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
+}
 function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 
 function whoIs(idToken) {
@@ -97,9 +102,10 @@ function aiChat(e) {
   var models = props().getProperty('GEMINI_MODEL') ? [props().getProperty('GEMINI_MODEL')] : MODELS;
   var last = '';
   for (var i = 0; i < models.length; i++) {
-    var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent', {
-      method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true,
-      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+    var url;
+    try { url = geminiUrl(models[i]); } catch (err) { return json({ error: err.message }); }
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true
     });
     var code = res.getResponseCode(), out = res.getContentText();
     if (code === 200) {
@@ -116,9 +122,8 @@ function aiChat(e) {
 
 // Проверка из редактора: «aiPing» → в журнале должен появиться ответ модели.
 function aiPing() {
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[0] + ':generateContent', {
+  var res = UrlFetchApp.fetch(geminiUrl(MODELS[0]), {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
     payload: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Ответь одним словом: работает?' }] }] })
   });
   console.log(res.getResponseCode() + ' ' + res.getContentText().slice(0, 400));
