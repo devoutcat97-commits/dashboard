@@ -33,13 +33,46 @@
 
   // ---------- Цены ----------
   function prices() { return Store.getSetting('shop.prices', {}) || {}; }
-  function priceOf(name) {
-    var P = prices(), k = key(name);
+  function lookup(P, name) {
+    var k = key(name);
     if (P[k]) return P[k];
     var fw = firstWord(name);
     var hit = Object.keys(P).filter(function (x) { return x.split(' ')[0] === fw; })
       .sort(function (a, b) { return (P[b].date || '').localeCompare(P[a].date || ''); })[0];
     return hit ? P[hit] : null;
+  }
+  // Сначала цена из твоих чеков, иначе — найденная на сайте магазина.
+  function priceOf(name) { return lookup(prices(), name) || lookup(Store.getSetting('shop.sitePrices', {}) || {}, name); }
+  function promosFor(name) {
+    var pr = Store.getSetting('shop.promos', null);
+    if (!pr || !pr.items) return [];
+    var fw = firstWord(name);
+    if (!fw || fw.length < 3) return [];
+    return pr.items.filter(function (x) { return MD.norm(x.name).indexOf(fw.slice(0, Math.max(4, fw.length - 2))) === 0; });
+  }
+  // Узнать цены на сайтах: Магнит (поиск) и акции Марии-Ра.
+  function fetchSitePrices() {
+    var open = Store.list('shopping').filter(function (s) { return !s.done; });
+    var q = open.filter(function (s) { return !lookup(prices(), s.text); }).map(function (s) { return s.text; }).slice(0, 25);
+    U.toast('Узнаю цены в магазинах…');
+    return Promise.all([server(), firebase.auth().currentUser.getIdToken()]).then(function (r) {
+      return fetch(r[0] + '?a=prices', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken: r[1], q: q, promos: true }) });
+    }).then(function (res) { return res.json(); }).then(function (d) {
+      if (d.error) throw new Error(d.error);
+      var SP = Object.assign({}, Store.getSetting('shop.sitePrices', {}) || {});
+      var found = 0;
+      Object.keys(d.magnit || {}).forEach(function (q1) {
+        var fw = firstWord(q1);
+        var list = (d.magnit[q1] || []).filter(function (i) { return MD.norm(i.name).indexOf(fw.slice(0, Math.max(3, fw.length - 2))) !== -1; });
+        if (!list.length) return;
+        var best = list.sort(function (a, b) { return a.price - b.price; })[0];
+        SP[key(q1)] = { name: shortName(best.name), price: best.price, date: U.today(), store: 'Магнит', full: best.name };
+        found++;
+      });
+      Store.setSetting('shop.sitePrices', SP);
+      if (d.promos && d.promos.length) Store.setSetting('shop.promos', { date: U.today(), items: d.promos });
+      U.toast('Цены: ' + found + ' из ' + q.length + (d.promos ? ' · акций Марии-Ра: ' + d.promos.length : ''));
+    }).catch(function (e) { alert(e.message); });
   }
   function rememberPrices(items, store, date) {
     var P = Object.assign({}, prices());
@@ -366,14 +399,32 @@
       var p = priceOf(s.text);
       if (p && !s.done) { est += p.price; known++; }
       return '<li class="shop-item' + (s.done ? ' is-done' : '') + '"><label><input type="checkbox" data-sh-check="' + s.id + '"' + (s.done ? ' checked' : '') + '><span>' + esc(s.text) + '</span></label>' +
-        (p ? '<span class="muted" data-tip="' + esc((p.store ? p.store + ', ' : '') + U.dayShort(p.date)) + '">≈ ' + U.money(Math.round(p.price)) + '</span>' : '') +
+        (p ? '<span class="muted" data-tip="' + esc((p.store ? p.store + ', ' : '') + U.dayShort(p.date) + (p.full ? '
+' + p.full : '')) + '">≈ ' + U.money(Math.round(p.price)) + (p.store === 'Магнит' ? ' М' : '') + '</span>' : '') +
+        (!s.done && promosFor(s.text).length ? '<span class="shop-promo" data-tip="' + esc(promosFor(s.text).slice(0, 4).map(function (x) { return x.name + ' — ' + x.price + ' ₽ (было ' + x.old + ', ' + x.until + ')'; }).join('
+')) + '">🏷️ акция</span>' : '') +
         '<button type="button" class="icon-btn" data-sh-del="' + s.id + '" aria-label="Убрать">×</button></li>';
     };
     var html = open.map(row).join('') + done.map(row).join('');
     return '<form class="shop-add card" data-sh-lform autocomplete="off"><input name="t" placeholder="Молоко, хлеб, яйца…" aria-label="Что купить"><button type="submit" class="btn btn-small btn-primary">＋</button></form>' +
       (html ? '<ul class="shop-list card">' + html + '</ul>' : U.empty({ emoji: '🛒', title: 'Список пуст', text: 'Впиши, что нужно купить, или собери список из меню на неделю во вкладке «Еда».' })) +
-      (known ? '<p class="field-hint">Примерно ' + U.money(Math.round(est)) + ' по ценам из твоих чеков (известно для ' + known + ' из ' + open.length + ').</p>' : '') +
+      (known ? '<p class="field-hint">Примерно ' + U.money(Math.round(est)) + ' (известно для ' + known + ' из ' + open.length + '). «М» — цена с сайта Магнита, остальное — из твоих чеков. 🏷️ — сейчас есть акция в Марии-Ра.</p>' : '') +
+      (open.length ? '<div class="btn-row"><button type="button" class="btn" data-sh-prices>🏷️ Цены и акции в магазинах</button></div>' : '') +
+      promoHtml(open) +
       (done.length ? '<div class="btn-row"><button type="button" class="btn btn-primary" data-sh-buy>💸 Купил отмеченное (' + done.length + ')</button></div>' : '');
+  }
+
+  function promoHtml(open) {
+    var pr = Store.getSetting('shop.promos', null);
+    if (!pr || !pr.items || !pr.items.length) return '';
+    var hits = [];
+    open.forEach(function (s) { promosFor(s.text).slice(0, 3).forEach(function (x) { if (hits.indexOf(x) === -1) hits.push(x); }); });
+    var all = state.promoAll ? pr.items : hits;
+    return '<section class="card"><div class="card-head"><h2>🏷️ Акции Марии-Ра</h2><button type="button" class="link-btn" data-sh-promoall>' + (state.promoAll ? 'только по списку' : 'все (' + pr.items.length + ')') + '</button></div>' +
+      (all.length ? '<ul class="shop-items">' + all.slice(0, 80).map(function (x) {
+        return '<li><span>' + esc(shortName(x.name)) + ' <small class="muted">' + esc(x.until) + '</small></span><b>' + U.money(x.price) + (x.old ? ' <s class="muted">' + U.money(x.old) + '</s>' : '') + '</b></li>';
+      }).join('') + '</ul>' : '<p class="chart-empty">На товары из списка акций сейчас нет.</p>') +
+      '<p class="field-hint">Обновлено ' + U.dayShort(pr.date) + '.</p></section>';
   }
 
   function foodHtml() {
@@ -456,6 +507,8 @@
     else if ('shCook' in d) askCook();
     else if (d.shDel) Store.remove('shopping', d.shDel);
     else if ('shBuy' in d) buyChecked();
+    else if ('shPrices' in d) fetchSitePrices();
+    else if ('shPromoall' in d) { state.promoAll = !state.promoAll; rerender(); }
     else if ('shAddrecipe' in d) recipeDialog(null);
     else if (d.shRecipe) recipeDialog(Store.list('recipes').find(function (r) { return r.id === d.shRecipe; }));
     else if (d.shNeed) { var r = Store.list('recipes').find(function (x) { return x.id === d.shNeed; }); U.toast('В список добавлено: ' + addToList(missingFor(r))); }
