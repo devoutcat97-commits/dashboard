@@ -581,7 +581,7 @@
 
   window.Tabs.time = {
     render: render, summary: summary, parseEntry: parseEntry, scheduledShift: scheduledShift, weekStats: weekStats,
-    quickAdd: quickAdd, catName: catName, fmtDur: fmtDur,
+    quickAdd: quickAdd, catName: catName, fmtDur: fmtDur, cats: cats,
     dayMinutes: function (date) { return total(entriesBetween(date, date)); },
     rangeMinutes: function (from, to) { return total(entriesBetween(from, to)); },
     rangeByCat: function (from, to) { return sumByCat(entriesBetween(from, to)); },

@@ -48,6 +48,7 @@ function del(p) { api('delete', userPath(p)); }
 
 // ---------- 1. Уведомления банка с телефона ----------
 function doPost(e) {
+  if (e && e.parameter && e.parameter.a === 'ai') return aiChat(e);
   var key = (e && e.parameter && e.parameter.k) || '';
   if (!key || key !== props().getProperty('HOOK_KEY')) return text('forbidden');
   var body = (e.postData && e.postData.contents) || (e.parameter && e.parameter.text) || '';
@@ -63,6 +64,65 @@ function doPost(e) {
   return text('ok');
 }
 function doGet() { return text('Сервер дашборда работает'); }
+
+// ---------- 3. ИИ-чат (Gemini) ----------
+// Дашборд присылает: idToken (кто пишет), system (правила + сводка данных), messages (переписка).
+// Проверяем, что пишет именно владелец, и спрашиваем Gemini от имени этого Google-аккаунта —
+// ключ не нужен, VPN не нужен: запрос идёт с серверов Google.
+var API_KEY = 'AIzaSyBpboHWJ6WXQi9bu1RHphYv5lpcmJmFHVo';   // публичный ключ Firebase (только для проверки входа)
+var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+
+function json(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
+
+function whoIs(idToken) {
+  var res = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + API_KEY, {
+    method: 'post', contentType: 'application/json', payload: JSON.stringify({ idToken: idToken }), muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) return '';
+  var u = JSON.parse(res.getContentText()).users;
+  return u && u[0] ? u[0].localId : '';
+}
+
+function aiChat(e) {
+  var req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
+  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var body = {
+    systemInstruction: { parts: [{ text: String(req.system || '').slice(0, 120000) }] },
+    contents: (req.messages || []).slice(-16).map(function (m) {
+      return { role: m.role === 'model' ? 'model' : 'user', parts: [{ text: String(m.text || '').slice(0, 4000) }] };
+    }),
+    generationConfig: { temperature: 0.2, responseMimeType: 'application/json' }
+  };
+  var models = props().getProperty('GEMINI_MODEL') ? [props().getProperty('GEMINI_MODEL')] : MODELS;
+  var last = '';
+  for (var i = 0; i < models.length; i++) {
+    var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent', {
+      method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+    });
+    var code = res.getResponseCode(), out = res.getContentText();
+    if (code === 200) {
+      var d = JSON.parse(out);
+      var parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts || [];
+      return json({ text: parts.map(function (p) { return p.text || ''; }).join(''), model: models[i] });
+    }
+    last = code + ' ' + out.slice(0, 300);
+    if (code !== 404) break;   // модель не найдена — пробуем следующую; иначе сразу сообщаем
+  }
+  console.warn('Gemini ' + last);
+  return json({ error: /429|RESOURCE_EXHAUSTED/.test(last) ? 'Лимит запросов к ИИ на сегодня исчерпан, попробуй позже' : 'ИИ не ответил: ' + last.slice(0, 160) });
+}
+
+// Проверка из редактора: «aiPing» → в журнале должен появиться ответ модели.
+function aiPing() {
+  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[0] + ':generateContent', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    payload: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Ответь одним словом: работает?' }] }] })
+  });
+  console.log(res.getResponseCode() + ' ' + res.getContentText().slice(0, 400));
+}
 function text(s) { return ContentService.createTextOutput(s); }
 
 // ---------- 2. Push-уведомления ----------
