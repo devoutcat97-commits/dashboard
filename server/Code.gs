@@ -70,7 +70,7 @@ function doGet() { return text('Сервер дашборда работает')
 // Проверяем, что пишет именно владелец, и спрашиваем Gemini с ключом из свойства скрипта GEMINI_KEY
 // (создаётся в Google Cloud → «Учётные данные»). VPN не нужен: запрос идёт с серверов Google.
 var API_KEY = 'AIzaSyBpboHWJ6WXQi9bu1RHphYv5lpcmJmFHVo';   // публичный ключ Firebase (только для проверки входа)
-var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 
 function geminiUrl(model) {
   var key = props().getProperty('GEMINI_KEY') || props().getProperty('GEMENI_KEY');
@@ -114,7 +114,8 @@ function aiChat(e) {
       return json({ text: parts.map(function (p) { return p.text || ''; }).join(''), model: models[i] });
     }
     last = code + ' ' + out.slice(0, 300);
-    if (code !== 404) break;   // модель не найдена — пробуем следующую; иначе сразу сообщаем
+    // модель не найдена или перегружена — пробуем следующую; иначе сразу сообщаем
+    if (code !== 404 && code !== 503 && code !== 500) break;
   }
   console.warn('Gemini ' + last);
   return json({ error: /429|RESOURCE_EXHAUSTED/.test(last) ? 'Лимит запросов к ИИ на сегодня исчерпан, попробуй позже' : 'ИИ не ответил: ' + last.slice(0, 160) });
