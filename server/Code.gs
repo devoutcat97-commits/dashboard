@@ -73,7 +73,7 @@ var API_KEY = 'AIzaSyBpboHWJ6WXQi9bu1RHphYv5lpcmJmFHVo';   // публичный
 var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
 
 function geminiUrl(model) {
-  var key = props().getProperty('GEMINI_KEY');
+  var key = props().getProperty('GEMINI_KEY') || props().getProperty('GEMENI_KEY');
   if (!key) throw new Error('Не задан ключ GEMINI_KEY в свойствах скрипта');
   return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
 }
