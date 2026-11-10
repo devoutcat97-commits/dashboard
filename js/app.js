@@ -14,6 +14,7 @@
     work: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>',
     study: '<path d="M4 19.5V5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5Zm0 0A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
     time: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+    shop: '<path d="M3 4h2.2l2.2 11h11l2-8H7"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
     moon: '<path d="M20 14.6A8 8 0 1 1 9.4 4a6.5 6.5 0 0 0 10.6 10.6Z"/>',
     auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/>',
@@ -29,6 +30,7 @@
   var TABS = [
     { id: 'summary', title: 'Сводка' },
     { id: 'money', title: 'Деньги' },
+    { id: 'shop', title: 'Покупки' },
     { id: 'work', title: 'Работа' },
     { id: 'study', title: 'Учёба' },
     { id: 'time', title: 'Время' }

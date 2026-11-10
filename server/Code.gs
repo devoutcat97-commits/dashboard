@@ -49,6 +49,7 @@ function del(p) { api('delete', userPath(p)); }
 // ---------- 1. Уведомления банка с телефона ----------
 function doPost(e) {
   if (e && e.parameter && e.parameter.a === 'ai') return aiChat(e);
+  if (e && e.parameter && e.parameter.a === 'check') return receipt(e);
   var key = (e && e.parameter && e.parameter.k) || '';
   if (!key || key !== props().getProperty('HOOK_KEY')) return text('forbidden');
   var body = (e.postData && e.postData.contents) || (e.parameter && e.parameter.text) || '';
@@ -220,4 +221,36 @@ function probe() {
       payload: { token: 'test', qrraw: 't=20240101T1200&s=1.00&fn=1&i=1&fp=1&n=1' } });
     console.log('чеки: ' + c.getResponseCode() + ' ' + c.getContentText().slice(0, 200));
   } catch (e) { console.log('чеки: ОШИБКА ' + e.message); }
+}
+
+
+// ---------- 4. Чек по QR-коду (proverkacheka.com → данные ФНС) ----------
+// Дашборд присылает строку из QR-кода чека (t=…&s=…&fn=…&i=…&fp=…&n=…), сервер возвращает товары.
+function receipt(e) {
+  var req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
+  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var token = props().getProperty('PROVERKACHEKA_TOKEN');
+  if (!token) return json({ error: 'Не задан ключ PROVERKACHEKA_TOKEN в свойствах сервера' });
+  var qr = String(req.qrraw || '').trim();
+  if (!/fn=\d+/.test(qr) || !/s=[\d.]+/.test(qr)) return json({ error: 'Это не QR-код кассового чека' });
+  var res = UrlFetchApp.fetch('https://proverkacheka.com/api/v1/check/get', {
+    method: 'post', muteHttpExceptions: true, payload: { token: token, qrraw: qr }
+  });
+  var d;
+  try { d = JSON.parse(res.getContentText()); } catch (err) { return json({ error: 'Сервис чеков не ответил' }); }
+  if (d.code !== 1 || !d.data || !d.data.json) {
+    var msg = typeof d.data === 'string' ? d.data : 'код ' + d.code;
+    return json({ error: d.code === 0 ? 'Чек пока не найден в ФНС — попробуй через пару часов' : 'Чек не получен: ' + msg });
+  }
+  var j = d.data.json;
+  return json({
+    store: j.user || j.retailPlace || '',
+    address: j.retailPlaceAddress || '',
+    dateTime: j.dateTime || '',
+    total: (j.totalSum || 0) / 100,
+    items: (j.items || []).map(function (it) {
+      return { name: String(it.name || '').trim(), qty: it.quantity || 1, price: (it.price || 0) / 100, sum: (it.sum || 0) / 100 };
+    })
+  });
 }

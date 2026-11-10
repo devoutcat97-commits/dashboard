@@ -87,6 +87,12 @@
     if (cd.length) { lines.push('ОСОБЫЕ ДАТЫ: ' + cd.map(function (x) { return x.id + ' ' + x.date + ' ' + x.title + (x.yearly ? ' (ежегодно)' : ''); }).join('; ')); }
     var sh = Store.list('shopping').filter(function (s) { return !s.done; });
     if (sh.length) lines.push('СПИСОК ПОКУПОК: ' + sh.map(function (s) { return s.id + '=' + s.text; }).join('; '));
+    var pan = Store.list('pantry');
+    lines.push('ПРОДУКТЫ ДОМА: ' + (pan.length ? pan.map(function (p) { return p.id + '=' + p.name; }).join('; ') : 'пока не записаны'));
+    var rec = Store.list('recipes');
+    if (rec.length) lines.push('МОИ РЕЦЕПТЫ: ' + rec.map(function (r) { return r.title + ' (' + (r.ingredients || []).join(', ') + ')'; }).join('; '));
+    var men = Store.list('menu');
+    if (men.length) lines.push('МЕНЮ: ' + men.filter(function (m) { return m.date >= today; }).map(function (m) { var r = rec.find(function (x) { return x.id === m.recipeId; }); return m.date + ' ' + (r ? r.title : '?'); }).join('; '));
     // Расписание на 7 дней
     if (window.Tabs.study && Tabs.study.lessonsOn) {
       var sched = [];
@@ -117,6 +123,11 @@
     '  add_time {category, date, minutes, note}',
     '  add_shopping {items: ["молоко", "хлеб"]}',
     '  add_countdown {title, date, yearly: true|false, emoji}',
+    '  add_recipe {title, ingredients: ["продукт", …], note}',
+    '  set_menu {date, title} — блюдо из МОИХ РЕЦЕПТОВ на дату (если рецепта нет — сначала add_recipe)',
+    '  pantry_add {items: ["рис", "яйца"]} — продукты, которые есть дома',
+    '  pantry_out {names: ["молоко"]} — продукт закончился (убрать из «дома»)',
+    'Когда предлагаешь блюда — опирайся на ПРОДУКТЫ ДОМА и МОИ РЕЦЕПТЫ, называй, чего не хватает, и предлагай add_shopping только если пользователь просит.',
     'Для изменения/удаления используй только id из сводки. Если не понятно, о какой записи речь, — переспроси в reply и не делай действий.',
     'В reply кратко перечисли, что сделано или что предлагаешь изменить.'
   ].join('\n');
@@ -198,6 +209,10 @@
       case 'add_time': return '⏱️ Время: ' + (+a.minutes || 0) + ' мин' + (a.note ? ' · ' + a.note : '') + ' · ' + validDate(a.date);
       case 'add_shopping': return '🛒 В список: ' + (a.items || []).join(', ');
       case 'add_countdown': return (a.emoji || '📅') + ' Особая дата: ' + a.title + ' · ' + a.date + (a.yearly ? ' · каждый год' : '');
+      case 'add_recipe': return '🍳 Рецепт: ' + a.title + ((a.ingredients || []).length ? ' (' + a.ingredients.join(', ') + ')' : '');
+      case 'set_menu': return '📅 Меню ' + validDate(a.date) + ': ' + a.title;
+      case 'pantry_add': return '🏠 Дома есть: ' + (a.items || []).join(', ');
+      case 'pantry_out': return '🏠 Закончилось: ' + (a.names || []).join(', ');
     }
     return '❔ ' + JSON.stringify(a);
   }
@@ -259,6 +274,17 @@
         var items = (a.items || []).map(function (s) { return String(s).trim(); }).filter(Boolean).slice(0, 30);
         var ids = Store.addMany('shopping', items.map(function (s) { return { text: s.charAt(0).toUpperCase() + s.slice(1), done: false }; })).map(function (x) { return x.id; });
         return function () { ids.forEach(function (id) { Store.remove('shopping', id); }); };
+      }
+      case 'add_recipe': {
+        var rcp = Store.add('recipes', { title: String(a.title || 'Блюдо').slice(0, 60), ingredients: (a.ingredients || []).map(String).slice(0, 40), note: String(a.note || '').slice(0, 1000) });
+        return function () { Store.remove('recipes', rcp.id); };
+      }
+      case 'set_menu': if (window.Tabs.shop) Tabs.shop.setMenuByTitle(validDate(a.date), a.title); return null;
+      case 'pantry_add': if (window.Tabs.shop) Tabs.shop.pantryAdd((a.items || []).map(String)); return null;
+      case 'pantry_out': {
+        var names = (a.names || []).map(function (n) { return MD.norm(n); });
+        Store.list('pantry').forEach(function (p) { if (names.some(function (n) { return MD.norm(p.name).indexOf(n) === 0 || n.indexOf(MD.norm(p.name)) === 0; })) Store.remove('pantry', p.id); });
+        return null;
       }
       case 'add_countdown': {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a.date || ''))) return null;
