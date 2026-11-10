@@ -123,7 +123,7 @@
       'cashback.cb': ['кэшбэк', 'кешбэк', 'кэшбек', 'кешбек', 'cashback', 'бонус'],
       'cashback.interest': ['проценты по вклад', 'проценты на остаток', 'процент на остаток', 'вклад'],
       'refunds.taxded': ['вычет'],
-      'refunds.returns': ['возврат'],
+      'refunds.returns': ['возврат', 'отмена операции оплаты'],
       'sales': ['продаж', 'продала', 'продал', 'авито', 'avito', 'юла']
     }
   };
@@ -131,19 +131,20 @@
   // Названия латиницей — так магазины записаны в PDF-выписке банка.
   var KEYWORDS_LATIN = {
     expense: {
-      'food.groceries': ['yarche', 'ярче', 'magnit', 'krasnoe&beloe', 'krasnoe & beloe', 'auchan', 'lenta', 'pyaterochka', 'perekrestok', 'dixy', 'vkusvill', 'spar ', 'maria-ra', 'мария-ра', 'monetka', 'монетка', 'bristol', 'holiday', 'metro cash'],
+      'food.groceries': ['yarche', 'ярче', 'magnit', 'krasnoe&beloe', 'krasnoe & beloe', 'auchan', 'lenta', 'pyaterochka', 'perekrestok', 'dixy', 'vkusvill', 'spar ', 'maria-ra', 'mariya-ra', 'мария-ра', 'monetka', 'монетка', 'bristol', 'holiday', 'metro cash'],
       'food.restaurants': ['rostics', 'burger king', 'vkusnoitochka', 'kfc', 'piccer', 'pizz', 'sushi', ' bar ', 'cafe', 'kafe', 'restoran', 'stolovaya', 'shaurm', 'shawarma', 'dodo', 'teremok', 'shokoladnic', 'skovorodovna'],
       'food.delivery': ['yobidoyobi', 'samokat', 'kuper', 'sbermarket', 'delivery'],
       'food.coffee': ['coffee', 'kofe', 'cofix'],
       'home.internet': ['rostelecom'],
       'transport.taxi': ['yandex*4121', 'taxi', 'uber', 'citymobil'],
+      'transport.public': ['metroelektrotrans', 'transkart', 'metro ', 'avtobus'],
       'transport': ['gazprom', 'lukoil', 'rosneft', 'azs ', 'азс'],
       'connect.mobile': ['beeline', 'megafon', 'tele2', 'yota', 'mts '],
       'connect.subs': ['yandex*5815', 'kinopoisk', 'spotify', 'okko', 'ivi.ru'],
       'fun.games': ['games', 'funpay', 'ggsel', 'steam', 'playstation'],
-      'fun.events': ['kinoteatr', 'cinema'],
+      'fun.events': ['kinoteatr', 'cinema', 'bouling', 'bowling'],
       'fun.hobby': ['tkani', 'ткани', 'пряжа'],
-      'health.pharmacy': ['apteka', 'aptechnyj', 'apteki', 'аптечный'],
+      'health.pharmacy': ['apteka', 'aptechnyj', 'apteki', 'аптечный', 'farm-servis', 'farmservis'],
       'gifts': ['detskiy mir', 'детский мир', 'absolyut shar', 'flowers', 'cvety'],
       'household.goods': ['fixprice', 'fix price', 'leroy', 'ikea', 'hoff'],
       'household.tech': ['dns-shop', 'mvideo', 'eldorado', 'citilink'],
@@ -425,6 +426,8 @@
   // Колонки таблицы: дата и время · дата обработки · описание · сумма операции · сумма в валюте счёта.
   // Берём «сумму в валюте счёта» (всегда в рублях). Поступления помечены «+», расходы — без знака.
   function parseTBankPdf(pages) {
+    var spr = spravkaCols(pages);
+    if (spr) return parseTBankSpravka(pages, spr);
     var cols = null;
     pages.some(function (p) {
       var desc = p.items.find(function (it) { return norm(it.s) === 'описание'; });
@@ -476,6 +479,70 @@
     return finalizeOps(ops, 'tbpdf');
   }
 
+  // ---------- Справка о движении средств Т-Банка (PDF) ----------
+  // В отличие от выписки (только за месяц) справку можно заказать за любой период.
+  // Колонки: дата и время операции · дата списания · сумма в валюте операции ·
+  // сумма в валюте карты · описание · номер карты. Время стоит строкой ниже даты,
+  // у суммы всегда есть знак: «+1.00 ₽» — поступление, «-580.00 ₽» — расход.
+  // Узнаём справку по шапке таблицы: «Описание» стоит правее обеих колонок с суммами.
+  function spravkaCols(pages) {
+    var found = null;
+    pages.some(function (p) {
+      var desc = p.items.find(function (it) { return norm(it.s) === 'описание'; });
+      if (!desc) return false;
+      var head = p.items.filter(function (it) { return Math.abs(it.y - desc.y) <= 3; });
+      var sums = head.filter(function (it) { return /^сумма/.test(norm(it.s)); }).sort(function (a, b) { return a.x - b.x; });
+      var card = head.find(function (it) { return /^номер/.test(norm(it.s)) && it.x > desc.x; });
+      if (sums.length >= 2 && sums[sums.length - 1].x < desc.x) {
+        found = { sum1: sums[0].x - 5, sum2: sums[sums.length - 1].x - 5, desc: desc.x - 5, card: card ? card.x - 5 : 1e9 };
+      }
+      return true;   // шапка найдена — дальше не ищем (это либо справка, либо обычная выписка)
+    });
+    return found;
+  }
+
+  function parseTBankSpravka(pages, c) {
+    var ops = [];
+    var cur = null;
+    pages.forEach(function (p) {
+      var items = p.items.slice().sort(function (a, b) { return b.y - a.y || a.x - b.x; });
+      var rows = [];
+      items.forEach(function (it) {
+        var last = rows[rows.length - 1];
+        if (last && Math.abs(last.y - it.y) <= 3) last.items.push(it);
+        else rows.push({ y: it.y, items: [it] });
+      });
+      var prevY = null;   // высота предыдущей строки таблицы (null — после шапки или в начале страницы)
+      rows.forEach(function (row) {
+        row.items.sort(function (a, b) { return a.x - b.x; });
+        var all = norm(row.items.map(function (it) { return it.s; }).join(' '));
+        // Шапка таблицы повторяется на каждой странице — пропускаем обе её строки.
+        if (/описание/.test(all) && /сумма/.test(all) || /списания/.test(all) && /карты/.test(all)) { prevY = null; cur = null; return; }
+        function zone(from, to) {
+          return row.items.filter(function (it) { return it.x >= from && it.x < to; }).map(function (it) { return it.s.trim(); }).join(' ').trim();
+        }
+        var zDate = zone(-1, c.sum1), zAcc = zone(c.sum2, c.desc), zDesc = zone(c.desc, c.card);
+        var dates = zDate.match(/\d{2}\.\d{2}\.\d{4}/g) || [];
+        if (dates.length >= 2 && /\d/.test(zAcc)) {
+          var m = zAcc.replace(/[₽\s  ]/g, '').replace(',', '.').replace('−', '-').match(/^([+\-]?)(\d+(?:\.\d+)?)$/);
+          if (!m) { prevY = row.y; return; }
+          var amount = UI.round2(parseFloat(m[2]));
+          if (m[1] !== '+') amount = -amount;
+          var d = dates[0].split('.');
+          cur = { date: d[2] + '-' + d[1] + '-' + d[0], time: '', amount: amount, bankCategory: '', mcc: '', description: zDesc };
+          ops.push(cur);
+        } else if (cur && prevY !== null && prevY - row.y <= 16 && !zAcc) {
+          // Вторая-третья строка той же операции: время и продолжение описания.
+          var t = zDate.match(/\b(\d{2}:\d{2})\b/);
+          if (t && !cur.time) cur.time = t[1];
+          if (zDesc) cur.description += (/-$/.test(cur.description) ? '' : ' ') + zDesc;
+        }
+        prevY = row.y;
+      });
+    });
+    return finalizeOps(ops, 'tbspr');
+  }
+
   // Категории Т-Банка → наши (сравнение по началу/вхождению слова).
   var TBANK_MAP = [
     ['супермаркет', 'food.groceries'], ['продукт', 'food.groceries'],
@@ -516,6 +583,22 @@
     return keys;
   }
 
+  // Одно и то же место в выписке и в справке записано чуть по-разному:
+  // «… MOSKVA RU» и «… MOSKVA RUS», «SANKT- PETERBU» и «SANKT-PETERBU».
+  // Приводим к общему виду, чтобы запомненные категории работали для обоих документов.
+  function descKey(s) {
+    return norm(s).replace(/-\s+/g, '-').replace(/\s(rus|ru)$/, '');
+  }
+  var idxSrc = null, idx = {};
+  function learnedIndex(learned) {
+    if (idxSrc !== learned) {
+      idxSrc = learned;
+      idx = {};
+      Object.keys(learned).forEach(function (k) { idx[descKey(k)] = learned[k]; });
+    }
+    return idx;
+  }
+
   function suggestForBankOp(op, ctx) {
     var learned = ctx.learned || {};
     var d = norm(op.description);
@@ -524,6 +607,7 @@
 
     var l = null;
     learnKeys(op).some(function (k) { l = learned[k]; return !!l; });
+    if (!l) l = learnedIndex(learned)[descKey(op.description)] || null;
     if (l && l.kind === 't') return { kind: 't', to: l.to, review: false };
     if (l && l.type === (op.amount < 0 ? 'expense' : 'income')) return { kind: 'c', type: l.type, category: l.category, sub: l.sub || '', review: false };
 
@@ -580,10 +664,20 @@
     var desc = after.split(/(?:\.\s*)?(?:Доступно|Баланс|Остаток|Карта\s*\*|\*\d{4})/i)[0]
       .replace(/^[\s,.:;—–-]+/, '').replace(/[\s,.;]+$/, '').trim();
     var action = before.replace(/\b(на|в)\s*$/i, '').trim();
+    // «Сбербанк Перевод на 500 ₽, счет RUB. Кирилл Н.» — впереди банк получателя, «счет RUB.» лишнее.
+    var bankName = '';
+    var bm = action.match(/^(.*?)\s*(перевод|покупка|оплата|пополнение|списание)(?=\s|$)/i);
+    if (bm && bm[1]) { bankName = bm[1].trim(); action = action.slice(bm[1].length).trim(); }
+    desc = desc.replace(/^сч[её]т\s+[A-Z]{3}\.?\s*/i, '').trim();
+    if (bankName && desc && !/^(накоп|копилк|вклад)/i.test(desc)) desc += ' (' + bankName + ')';
     if (!desc) desc = action;
     var own = PUSH_OWN.test(text);
     var incoming = PUSH_IN.test(action || text) && !/^(покупк|оплат|списан|перевод\b(?! от))/i.test(action);
     if (own) incoming = /(^|\s)(с|из|со) (копилк|накоп|вклад|счет|счёт)|со счета|со счёта/i.test(text);
+    // «Перевод на 1 ₽, накоп. счет. Баланс …» — это уведомление самого накопительного счёта:
+    // «Пополнение» — деньги пришли на него с карты, «Перевод»/«Списание» — ушли с него на карту.
+    // (Проверено по справке банка: в ту же минуту на карту пришло «Перевод себе +1 ₽».)
+    if (own && /^(накоп|копилк|вклад)/i.test(desc)) incoming = !/^(пополнен|зачислен|поступлен)/i.test(action);
     var d = at ? new Date(at) : new Date();
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
     var op = {
@@ -612,6 +706,7 @@
     parseTBankPdf: parseTBankPdf,
     suggestForBankOp: suggestForBankOp,
     learnKeys: learnKeys,
+    descKey: descKey,
     contractOf: contractOf,
     cleanDescription: cleanDescription
   };

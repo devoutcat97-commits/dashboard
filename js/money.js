@@ -1578,24 +1578,42 @@
       '<section class="card review-card">' +
         '<div class="card-head"><h2>🧾 Разобрать · ' + list.length + '</h2>' +
           '<button type="button" class="btn btn-small" data-action="review-all">Всё верно</button></div>' +
-        '<p class="field-hint">Эти операции пришли из уведомлений банка, но дашборд не уверен в категории. Нажми на строку, чтобы поправить, — он запомнит выбор.</p>' +
+        '<p class="field-hint">Эти операции пришли из уведомлений банка или из выписки, но дашборд не уверен в категории. Нажми на строку, чтобы поправить, — он запомнит выбор.</p>' +
         '<ul class="plan-list">' + rows + '</ul>' +
         (list.length > 8 ? '<p class="card-foot">и ещё ' + (list.length - 8) + '…</p>' : '') +
       '</section>'
     );
   }
 
-  // Для импорта выписки: операция уже записана из уведомления? (та же сумма и направление, дата ±1 день)
-  function pushTwin(op, used) {
-    var amt = Math.abs(op.amount), sign = op.amount < 0;
+  // ---------- Отсев повторов при импорте ----------
+  // Выписка (за месяц) и справка о движении средств (за любой период) описывают одну и ту же
+  // операцию немного разными словами, но дата и сумма в них совпадают всегда. Поэтому «та же
+  // операция» = та же дата и сумма со знаком; одинаковые операции одного дня считаем поштучно.
+  function canonOfKey(key) {
+    var p = String(key || '').split('|');
+    return p.length >= 4 && /^\d{4}-\d{2}-\d{2}$/.test(p[1]) && p[3] !== '' && !isNaN(+p[3]) ? p[1] + '|' + (+p[3]).toFixed(2) : '';
+  }
+  function canonOfOp(op) { return op.date + '|' + op.amount.toFixed(2); }
+
+  // Операция уже записана без выписки — из уведомления банка или вручную?
+  // Ищем среди записей без отметки банка: та же сумма и направление по этому счёту, дата ±1 день.
+  function looseTwin(op, loose, used, target) {
+    var amt = Math.abs(op.amount), want = op.amount < 0 ? -1 : 1;
     var d0 = U.toDate(op.date).getTime();
-    return allTx().find(function (t) {
-      if (t.source !== 'push' || t.importKey || used[t.id]) return false;
-      if (Math.abs(t.amount - amt) > 0.009) return false;
-      var out = t.type === 'expense' || (t.type === 'transfer' && !isPiggy(t.account) && t.account !== 'cash');
-      if (out !== sign) return false;
-      return Math.abs(U.toDate(t.date).getTime() - d0) <= 864e5 * 1.5;
+    var best = null, bestGap = 0;
+    loose.forEach(function (t) {
+      if (used[t.id] || Math.abs(t.amount - amt) > 0.009) return;
+      var dir = t.type === 'transfer' ? (t.account === target ? -1 : t.to === target ? 1 : 0)
+        : t.account !== target ? 0 : t.type === 'expense' ? -1 : 1;
+      if (dir !== want) return;
+      var gap = Math.abs(U.toDate(t.date).getTime() - d0);
+      // Уведомление приходит в момент операции, а вручную крупную сумму (зарплату) могли отметить
+      // и через несколько дней — для таких ищем пару в пределах недели.
+      var limit = t.source !== 'push' && amt >= 1000 ? 864e5 * 7.5 : 864e5 * 1.5;
+      if (gap > limit) return;
+      if (!best || gap < bestGap) { best = t; bestGap = gap; }
     });
+    return best;
   }
 
   // ---------- Предупреждение о лимитах ----------
@@ -1736,9 +1754,11 @@
     var importCard =
       '<section class="card settings-card">' +
         '<h2>Импорт выписки Т-Банка</h2>' +
-        '<p class="field-hint">Подойдёт PDF-выписка из приложения Т-Банка («Выписка» → период → PDF) или CSV из веб-версии. ' +
+        '<p class="field-hint">Подойдут PDF из приложения Т-Банка: <b>справка о движении средств</b> (за любой период, хоть за год) ' +
+          'или обычная выписка (только за месяц), а ещё CSV из веб-версии. ' +
           'Перед сохранением покажу список, где можно поправить категории; выбор применится ко всем таким же операциям. ' +
-          'Операции, которые уже есть, отсеются сами. Файл читается прямо в браузере и никуда не отправляется.</p>' +
+          'Операции, которые уже есть — из другой выписки, из уведомлений или внесённые вручную, — отсеются сами. ' +
+          'Файл читается прямо в браузере и никуда не отправляется.</p>' +
         '<div class="btn-row"><button type="button" class="btn" data-action="import">' + I.upload + 'Загрузить выписку</button></div>' +
       '</section>';
 
@@ -2458,9 +2478,34 @@
     var A = getAccounts();
     var regular = A.filter(function (a) { return a.kind !== 'piggy' && a.kind !== 'debt'; });
     var target = (regular.find(function (a) { return /т-банк|тбанк|тинькофф|tbank/i.test(a.name); }) || regular[0]).id;
-    var existing = {};
-    allTx().forEach(function (t) { if (t.importKey) existing[t.importKey] = true; });
+    var existing = {};      // точные отметки уже загруженных операций
+    var canonLeft = {};     // «дата|сумма» → сколько таких операций уже загружено из любого документа банка
+    var loose = [];         // записи без отметки банка: из уведомлений и внесённые вручную
+    allTx().forEach(function (t) {
+      if (!t.importKey) { loose.push(t); return; }
+      existing[t.importKey] = true;
+      var c = canonOfKey(t.importKey);
+      if (c) canonLeft[c] = (canonLeft[c] || 0) + 1;
+    });
     var learned = getLearned();
+    var showDups = false;
+    // Как ты уже размечал такие же места раньше: «YARCHE» → Продукты и т.п.
+    // Берём записи из прошлых выписок, где категорию выбрал ты (не «Другое» и не «на разбор»).
+    var history = {};
+    allTx().forEach(function (t) {
+      if (!t.importKey || t.review || t.type === 'transfer' || /^other-/.test(t.category) || !t.note) return;
+      var k = MD.descKey(t.note);
+      var h = history[k] || (history[k] = {});
+      var v = t.type + ':' + t.category + ':' + (t.sub || '');
+      h[v] = (h[v] || 0) + 1;
+    });
+    function fromHistory(op) {
+      var h = history[MD.descKey(op.note || '')];
+      if (!h) return null;
+      var best = Object.keys(h).sort(function (a, b) { return h[b] - h[a]; })[0].split(':');
+      if (best[0] !== (op.amount < 0 ? 'expense' : 'income')) return null;
+      return { kind: 'c', type: best[0], category: best[1], sub: best[2] || '', review: false };
+    }
 
     ops.sort(function (a, b) { return (b.date + b.time).localeCompare(a.date + a.time); });
     // Операции «одного вида» (тот же договор или то же описание) — чтобы применять выбор ко всем сразу.
@@ -2468,16 +2513,38 @@
       var contract = MD.contractOf(op.description);
       return contract ? 'договор:' + contract : MD.norm(op.description) + (op.amount < 0 ? '|-' : '|+');
     }
-    var usedTwins = {};
     var rows = ops.map(function (op) {
       var s = MD.suggestForBankOp(op, { learned: learned, accounts: A, account: target });
+      if (s.kind === 'c' && (s.review || /^other-/.test(s.category))) s = fromHistory(op) || s;
       var key = choiceKey(s);
-      var dup = !!existing[op.importKey];
-      // Уже пришла из уведомления — не дублируем, а только привяжем к выписке.
-      var twin = dup ? null : pushTwin(op, usedTwins);
-      if (twin) { usedTwins[twin.id] = true; dup = true; }
-      return { op: op, choice: key, initial: key, review: s.review, checked: !dup, dup: dup, twin: twin ? twin.id : '', touched: false, group: groupKeyOf(op) };
+      return { op: op, choice: key, initial: key, review: s.review, checked: true, dup: false, twin: '', twinKind: '', touched: false, group: groupKeyOf(op) };
     });
+    // 1) Тот же документ уже загружали — отметки совпадают точно.
+    rows.forEach(function (r) {
+      if (!existing[r.op.importKey]) return;
+      r.dup = true;
+      var c = canonOfOp(r.op);
+      if (canonLeft[c]) canonLeft[c]--;
+    });
+    // 2) Операция уже загружена из другого документа (выписка ↔ справка): та же дата и сумма.
+    rows.forEach(function (r) {
+      var c = canonOfOp(r.op);
+      if (r.dup || !canonLeft[c]) return;
+      canonLeft[c]--;
+      r.dup = true;
+    });
+    // 3) Уже записана из уведомления банка или вручную — не дублируем, а привяжем к документу.
+    var usedTwins = {};
+    rows.forEach(function (r) {
+      if (r.dup) return;
+      var twin = looseTwin(r.op, loose, usedTwins, target);
+      if (!twin) return;
+      usedTwins[twin.id] = true;
+      r.dup = true;
+      r.twin = twin.id;
+      r.twinKind = twin.source === 'push' ? 'push' : 'manual';
+    });
+    rows.forEach(function (r) { r.checked = !r.dup; });
 
     var dlg = document.createElement('dialog');
     dlg.className = 'sheet sheet--wide';
@@ -2485,8 +2552,12 @@
     function rowsHtml() {
       var optNeg = choiceOptions(-1, target), optPos = choiceOptions(1, target);
       return rows.map(function (r, i) {
+        // Уже записанные операции по умолчанию не показываем: в справке за несколько месяцев их сотни.
+        if (r.dup && !showDups) return '';
         var opts = (r.op.amount < 0 ? optNeg : optPos).replace('value="' + esc(r.choice) + '"', 'value="' + esc(r.choice) + '" selected');
-        var flag = r.twin ? '<span class="imp-flag">уже есть из уведомления</span>' : r.dup ? '<span class="imp-flag">уже есть</span>' : r.review ? '<span class="imp-flag imp-flag--review">проверь категорию</span>' : '';
+        var flag = r.twinKind === 'push' ? '<span class="imp-flag">уже есть из уведомления</span>'
+          : r.twinKind === 'manual' ? '<span class="imp-flag">похоже, уже записано вручную</span>'
+          : r.dup ? '<span class="imp-flag">уже есть</span>' : r.review ? '<span class="imp-flag imp-flag--review">проверь категорию</span>' : '';
         return (
           '<div class="imp-row' + (r.dup ? ' is-dup' : '') + '" data-i="' + i + '">' +
             '<input type="checkbox" data-role="imp-check" aria-label="Импортировать"' + (r.checked ? ' checked' : '') + '>' +
@@ -2503,8 +2574,11 @@
       var dups = rows.filter(function (r) { return r.dup; }).length;
       var review = rows.filter(function (r) { return r.review && r.checked; }).length;
       var n = rows.filter(function (r) { return r.checked; }).length;
-      dlg.querySelector('.imp-stats').textContent = 'Найдено ' + rows.length + ' · уже было ' + dups + ' · выбрано ' + n +
-        (review ? ' · проверь категорию у ' + review : '');
+      dlg.querySelector('.imp-stats').innerHTML = 'Найдено ' + rows.length + ' · уже было ' + dups + ' · выбрано ' + n +
+        (review ? ' · проверь категорию у ' + review : '') +
+        (dups ? ' · <button type="button" class="link-btn" data-imp-dups>' + (showDups ? 'скрыть уже записанные' : 'показать уже записанные') + '</button>' : '');
+      var empty = dlg.querySelector('.imp-empty');
+      if (empty) empty.hidden = showDups || dups < rows.length;
       var btn = dlg.querySelector('[data-imp-go]');
       btn.textContent = 'Импортировать ' + n;
       btn.disabled = !n;
@@ -2520,8 +2594,9 @@
           '</select></label>' +
           '<p class="imp-stats"></p>' +
         '</div>' +
+        '<p class="chart-empty imp-empty" hidden>Все операции из этого файла уже записаны — добавлять нечего.</p>' +
         '<div class="imp-list">' + rowsHtml() + '</div>' +
-        '<div class="sheet-foot"><span class="field-hint">Исправленные категории дашборд запомнит.</span><span class="spacer"></span>' +
+        '<div class="sheet-foot"><span class="field-hint">Исправленные категории дашборд запомнит. Где не уверен — положит в «Разобрать».</span><span class="spacer"></span>' +
           '<button type="button" class="btn" data-close>Отмена</button>' +
           '<button type="submit" class="btn btn-primary" data-imp-go>Импортировать</button></div>' +
       '</form>';
@@ -2568,7 +2643,12 @@
     });
 
     dlg.addEventListener('click', function (e) {
-      if (e.target === dlg || e.target.closest('[data-close]')) dlg.close();
+      if (e.target === dlg || e.target.closest('[data-close]')) { dlg.close(); return; }
+      if (e.target.closest('[data-imp-dups]')) {
+        showDups = !showDups;
+        list.innerHTML = rowsHtml();
+        stats();
+      }
     });
     dlg.addEventListener('close', function () { dlg.remove(); });
 
@@ -2582,6 +2662,8 @@
         var op = r.op;
         var amount = Math.abs(op.amount);
         var base = { amount: amount, date: op.date, note: op.note || op.description, importKey: op.importKey, bankCategory: op.bankCategory };
+        // Категорию угадали неуверенно и её не трогали — попадёт в «Разобрать».
+        if (r.review && !r.touched) { base.review = true; base.bankDesc = op.description; }
         var parts = r.choice.split(':');
         if (parts[0] === 't') {
           recs.push(Object.assign(base, op.amount < 0
@@ -2600,8 +2682,10 @@
         }
       });
       if (learnedChanged) Store.setSetting('money.learned', newLearned);
-      // Операции из уведомлений привязываем к выписке, чтобы при следующем импорте они тоже считались «уже есть».
-      rows.forEach(function (r) { if (r.twin) Store.update('transactions', r.twin, { importKey: r.op.importKey, bankCategory: r.op.bankCategory || '' }); });
+      // Записи из уведомлений и внесённые вручную привязываем к документу банка,
+      // чтобы при следующем импорте они тоже считались «уже есть». Если строку отметили галочкой —
+      // значит, это всё-таки другая операция: тогда не привязываем, а добавляем как новую.
+      rows.forEach(function (r) { if (r.twin && !r.checked) Store.update('transactions', r.twin, { importKey: r.op.importKey, bankCategory: r.op.bankCategory || '' }); });
       Store.addMany('transactions', recs);
       dlg.close();
       U.toast('Импортировано: ' + recs.length + ' ' + U.plural(recs.length, 'операция', 'операции', 'операций'));
@@ -2713,7 +2797,7 @@
     if (show && !dropOverlay) {
       dropOverlay = document.createElement('div');
       dropOverlay.className = 'drop-overlay';
-      dropOverlay.innerHTML = '<div class="drop-box"><span class="drop-emoji">📄</span><b>Отпусти, чтобы загрузить выписку</b><span>PDF из приложения Т-Банка или CSV</span></div>';
+      dropOverlay.innerHTML = '<div class="drop-box"><span class="drop-emoji">📄</span><b>Отпусти, чтобы загрузить выписку</b><span>Выписка или справка о движении средств Т-Банка (PDF), либо CSV</span></div>';
       document.body.appendChild(dropOverlay);
     }
     if (dropOverlay) dropOverlay.classList.toggle('is-on', !!show);

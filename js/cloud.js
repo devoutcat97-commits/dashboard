@@ -256,9 +256,13 @@
       return out.length ? JSON.stringify(out) : null;
     }
     if (key === 'o~settings') {
+      var noBase = b == null;
       B = B || {}; L = L || {}; R = R || {};
       var res = {};
       Object.keys(Object.assign({}, B, L, R)).forEach(function (k2) {
+        // Устройство подключается к облаку впервые (общей версии нет), а настройка есть и там, и здесь:
+        // у настроек нет отметки времени, поэтому верим облаку — там то, чем уже пользуются другие устройства.
+        if (noBase && k2 in L && k2 in R) { res[k2] = R[k2]; return; }
         var r4 = pick3(k2 in B, B[k2], k2 in L, L[k2], k2 in R, R[k2]);
         if (r4.keep) res[k2] = r4.v;
       });
