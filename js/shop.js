@@ -399,10 +399,8 @@
       var p = priceOf(s.text);
       if (p && !s.done) { est += p.price; known++; }
       return '<li class="shop-item' + (s.done ? ' is-done' : '') + '"><label><input type="checkbox" data-sh-check="' + s.id + '"' + (s.done ? ' checked' : '') + '><span>' + esc(s.text) + '</span></label>' +
-        (p ? '<span class="muted" data-tip="' + esc((p.store ? p.store + ', ' : '') + U.dayShort(p.date) + (p.full ? '
-' + p.full : '')) + '">≈ ' + U.money(Math.round(p.price)) + (p.store === 'Магнит' ? ' М' : '') + '</span>' : '') +
-        (!s.done && promosFor(s.text).length ? '<span class="shop-promo" data-tip="' + esc(promosFor(s.text).slice(0, 4).map(function (x) { return x.name + ' — ' + x.price + ' ₽ (было ' + x.old + ', ' + x.until + ')'; }).join('
-')) + '">🏷️ акция</span>' : '') +
+        (p ? '<span class="muted" data-tip="' + esc((p.store ? p.store + ', ' : '') + U.dayShort(p.date) + (p.full ? '\n' + p.full : '')) + '">≈ ' + U.money(Math.round(p.price)) + (p.store === 'Магнит' ? ' М' : '') + '</span>' : '') +
+        (!s.done && promosFor(s.text).length ? '<span class="shop-promo" data-tip="' + esc(promosFor(s.text).slice(0, 4).map(function (x) { return x.name + ' — ' + x.price + ' ₽ (было ' + x.old + ', ' + x.until + ')'; }).join('\n')) + '">🏷️ акция</span>' : '') +
         '<button type="button" class="icon-btn" data-sh-del="' + s.id + '" aria-label="Убрать">×</button></li>';
     };
     var html = open.map(row).join('') + done.map(row).join('');
