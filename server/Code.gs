@@ -70,7 +70,7 @@ function doGet() { return text('Сервер дашборда работает')
 // Проверяем, что пишет именно владелец, и спрашиваем Gemini с ключом из свойства скрипта GEMINI_KEY
 // (создаётся в Google Cloud → «Учётные данные»). VPN не нужен: запрос идёт с серверов Google.
 var API_KEY = 'AIzaSyBpboHWJ6WXQi9bu1RHphYv5lpcmJmFHVo';   // публичный ключ Firebase (только для проверки входа)
-var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
+var MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
 
 function geminiUrl(model) {
   var key = props().getProperty('GEMINI_KEY') || props().getProperty('GEMENI_KEY');
@@ -104,10 +104,15 @@ function aiChat(e) {
   for (var i = 0; i < models.length; i++) {
     var url;
     try { url = geminiUrl(models[i]); } catch (err) { return json({ error: err.message }); }
-    var res = UrlFetchApp.fetch(url, {
-      method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true
-    });
-    var code = res.getResponseCode(), out = res.getContentText();
+    var res, code, out;
+    for (var attempt = 0; attempt < 2; attempt++) {   // при перегрузке — короткая пауза и ещё попытка
+      res = UrlFetchApp.fetch(url, {
+        method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true
+      });
+      code = res.getResponseCode(); out = res.getContentText();
+      if (code !== 503) break;
+      Utilities.sleep(1500);
+    }
     if (code === 200) {
       var d = JSON.parse(out);
       var parts = d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts || [];
@@ -118,7 +123,8 @@ function aiChat(e) {
     if (code !== 404 && code !== 503 && code !== 500) break;
   }
   console.warn('Gemini ' + last);
-  return json({ error: /429|RESOURCE_EXHAUSTED/.test(last) ? 'Лимит запросов к ИИ на сегодня исчерпан, попробуй позже' : 'ИИ не ответил: ' + last.slice(0, 160) });
+  return json({ error: /429|RESOURCE_EXHAUSTED/.test(last) ? 'Лимит запросов к ИИ на сегодня исчерпан, попробуй позже'
+    : /503|UNAVAILABLE/.test(last) ? 'ИИ сейчас перегружен (у Google пик нагрузки). Попробуй через минуту.' : 'ИИ не ответил: ' + last.slice(0, 160) });
 }
 
 // Проверка из редактора: «aiPing» → в журнале должен появиться ответ модели.
