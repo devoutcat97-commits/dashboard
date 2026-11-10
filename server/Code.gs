@@ -50,6 +50,7 @@ function del(p) { api('delete', userPath(p)); }
 function doPost(e) {
   if (e && e.parameter && e.parameter.a === 'ai') return aiChat(e);
   if (e && e.parameter && e.parameter.a === 'check') return receipt(e);
+  if (e && e.parameter && e.parameter.a === 'prices') return sitePrices(e);
   var key = (e && e.parameter && e.parameter.k) || '';
   if (!key || key !== props().getProperty('HOOK_KEY')) return text('forbidden');
   var body = (e.postData && e.postData.contents) || (e.parameter && e.parameter.text) || '';
@@ -253,4 +254,52 @@ function receipt(e) {
       return { name: String(it.name || '').trim(), qty: it.quantity || 1, price: (it.price || 0) / 100, sum: (it.sum || 0) / 100 };
     })
   });
+}
+
+
+// ---------- 5. Цены магазинов (только открытые источники) ----------
+// Магнит — их публичный поиск по каталогу; Мария-Ра — страница акций. Лента и Пятёрочка
+// закрыли автоматический доступ, их не трогаем.
+function magnitSearch(q) {
+  var r = UrlFetchApp.fetch('https://magnit.ru/webgate/v2/goods/search', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ term: q, pagination: { limit: 6, offset: 0 }, sort: { order: 'desc', type: 'popularity' }, storeCode: '992301', storeType: 'dostavka', catalogType: '3' })
+  });
+  if (r.getResponseCode() !== 200) return [];
+  return (JSON.parse(r.getContentText()).items || []).map(function (i) { return { name: i.name, price: i.price / 100 }; });
+}
+function mariaPromos() {
+  var cache = CacheService.getScriptCache();
+  var c = cache.get('maria-promos');
+  if (c) return JSON.parse(c);
+  var out = [];
+  for (var page = 1; page <= 15; page++) {
+    var r = UrlFetchApp.fetch('https://www.maria-ra.ru/aktsii/?PAGEN_1=' + page, { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) break;
+    var html = r.getContentText();
+    var cards = html.split('discount-item__link').slice(1);
+    if (!cards.length) break;
+    var before = out.length;
+    cards.forEach(function (c) {
+      var t = c.match(/discount-item__title">([^<]+)</), p = c.match(/discount-item__price">(\d+)\s*<span>(\d+)/), o = c.match(/discount-item__price_old">([\d.]+)/), d = c.match(/discount-item__date">([^<]+)</);
+      if (t && p) out.push({ name: t[1].replace(/&nbsp;/g, ' ').trim(), price: +(p[1] + '.' + p[2]), old: o ? +o[1] : 0, until: d ? d[1].replace(/&nbsp;/g, ' ').trim() : '' });
+    });
+    if (out.length === before) break;
+    Utilities.sleep(300);
+  }
+  // убираем повторы (последняя страница сайта иногда отдаётся повторно)
+  var seen = {}; out = out.filter(function (x) { var k = x.name + x.price; if (seen[k]) return false; seen[k] = 1; return true; });
+  try { cache.put('maria-promos', JSON.stringify(out), 6 * 3600); } catch (e) {}
+  return out;
+}
+function sitePrices(e) {
+  var req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
+  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var res = { magnit: {}, promos: [] };
+  (req.q || []).slice(0, 25).forEach(function (q) {
+    try { res.magnit[q] = magnitSearch(q); } catch (err) { res.magnit[q] = []; }
+  });
+  if (req.promos) { try { res.promos = mariaPromos(); } catch (err) {} }
+  return json(res);
 }
