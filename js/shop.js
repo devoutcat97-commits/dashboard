@@ -373,7 +373,7 @@
         (open ? '<ul class="shop-items">' + (p.items || []).map(function (i) { return '<li><span>' + esc(shortName(i.name)) + (i.qty && i.qty !== 1 ? ' × ' + U.num(i.qty) : '') + '</span><b>' + (i.sum ? U.money(i.sum) : '') + '</b></li>'; }).join('') +
           '</ul><button type="button" class="link-btn" data-sh-delp="' + p.id + '">удалить чек</button>' : '') + '</li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Сканировать чек</button><button type="button" class="btn" data-sh-manual>✍️ Вручную</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Чек по QR</button><button type="button" class="btn" data-sh-manual>✍️ Вручную</button></div>' +
       '<div class="grid grid--2"><div class="card tile"><div class="tile-label">Покупки за месяц</div><div class="tile-value">' + U.money(Math.round(monthTotal(month))) + '</div><div class="tile-hint">' + month.length + ' ' + U.plural(month.length, 'чек', 'чека', 'чеков') + '</div></div>' +
       '<div class="card tile"><div class="tile-label">Знаю цен</div><div class="tile-value">' + Object.keys(prices()).length + '</div><div class="tile-hint">из твоих чеков</div></div></div>' +
       (rows ? '<ul class="plan-list card">' + rows + '</ul>' : U.empty({ emoji: '🧾', title: 'Чеков пока нет', text: 'Отсканируй QR-код с чека — дашборд узнает, что ты купил и почём, и сам положит продукты в «Дома».', action: 'Сканировать чек', attr: 'data-sh-scan' }));
@@ -467,7 +467,7 @@
         '<span class="tx-sub">' + U.dayShort(t.date) + (p && p.job ? ' · ' + (p.job === 'remote' ? 'дистанционная' : 'очная') : '') + (what ? ' · ' + esc(what) : '') + '</span></button>' +
         '<span class="plan-amt">' + U.money(t.amount) + '</span>' + st + '</li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Сканировать чек</button><button type="button" class="btn" data-sh-wmanual>✍️ Вручную</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Чек по QR</button><button type="button" class="btn" data-sh-wmanual>✍️ Вручную</button></div>' +
       '<div class="grid grid--2"><div class="card tile"><div class="tile-label">Для работы за месяц</div><div class="tile-value">' + U.money(Math.round(month)) + '</div></div>' +
       '<div class="card tile"><div class="tile-label">Должны вернуть</div><div class="tile-value' + (due ? ' is-bad' : '') + '">' + U.money(Math.round(due)) + '</div><div class="tile-hint">' + (due ? 'отметь, когда вернут' : 'всё возмещено') + '</div></div></div>' +
       (rows ? '<ul class="plan-list card">' + rows + '</ul>' : U.empty({ emoji: '💼', title: 'Рабочих покупок пока нет', text: 'Отсканируй чек и выбери «Для работы» — или впиши покупку. Сюда же попадают траты с категорией «Расходы на работу».' }));

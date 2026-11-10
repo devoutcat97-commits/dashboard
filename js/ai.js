@@ -400,6 +400,8 @@
     b.textContent = '✨';
     b.addEventListener('click', open);
     document.body.appendChild(b);
+    var hb = document.getElementById('ai-head-btn');
+    if (hb) hb.addEventListener('click', open);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addButton); else addButton();
 

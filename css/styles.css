@@ -2188,3 +2188,15 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 @media (max-width: 859.98px) {
   .view { padding-bottom: 96px; }   /* чтобы кнопка ✨ не закрывала конец страницы */
 }
+
+/* Помощник ✨: на телефоне — в шапке (плавающая кнопка закрывала кнопки справа), на компьютере — плавающая */
+.ai-head-btn { display: none; font-size: 17px; }
+@media (max-width: 859.98px) {
+  .ai-fab { display: none; }
+  .ai-head-btn { display: inline-grid; }
+  #theme-btn { display: none; }   /* тема переключается в настройках */
+  .ai-panel { top: 8px; }
+}
+@media (min-width: 860px) {
+  .shop-actions .btn { flex: 0 0 auto; }
+}
