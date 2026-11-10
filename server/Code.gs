@@ -203,3 +203,21 @@ function publishWebhook() {
   setJson('meta/hook', { url: webhookUrl(), at: new Date().toISOString() });
   console.log('Ссылка сохранена в дашборд: ' + webhookUrl());
 }
+
+// ---------- Проверка доступности (запускать из редактора) ----------
+// Смотрим, отвечают ли серверам Google сайты магазинов и сервис чеков. Ключи не используются.
+function probe() {
+  var urls = ['https://lenta.com/', 'https://magnit.ru/', 'https://www.maria-ra.ru/', 'https://5ka.ru/',
+    'https://lenta.com/api/v1/search?value=молоко', 'https://5ka.ru/api/v2/special_offers/'];
+  urls.forEach(function (u) {
+    try {
+      var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      console.log(r.getResponseCode() + ' ' + r.getContentText().length + ' ' + u + ' | ' + r.getContentText().slice(0, 120).replace(/\s+/g, ' '));
+    } catch (e) { console.log('ОШИБКА ' + u + ' ' + e.message); }
+  });
+  try {
+    var c = UrlFetchApp.fetch('https://proverkacheka.com/api/v1/check/get', { method: 'post', muteHttpExceptions: true,
+      payload: { token: 'test', qrraw: 't=20240101T1200&s=1.00&fn=1&i=1&fp=1&n=1' } });
+    console.log('чеки: ' + c.getResponseCode() + ' ' + c.getContentText().slice(0, 200));
+  } catch (e) { console.log('чеки: ОШИБКА ' + e.message); }
+}
