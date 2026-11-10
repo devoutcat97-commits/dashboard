@@ -24,6 +24,12 @@
       el.style.setProperty('--fx-i', Math.min(i, 10));
       void el.offsetWidth; // перезапуск анимации
       el.classList.add('fx-in');
+      // После появления убираем класс: оставшийся «сдвиг» ломает закреплённые кнопки внутри блока (кнопка «+»).
+      el.addEventListener('animationend', function done(ev) {
+        if (ev.target !== el) return;
+        el.classList.remove('fx-in');
+        el.removeEventListener('animationend', done);
+      });
     });
     countUp(root);
     growBars(root);

@@ -653,6 +653,8 @@
   function parseTBankPush(raw, at) {
     var text = String(raw || '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!text || PUSH_SKIP.test(text)) return null;
+    // «Покупка на 152 ₽, кэшбэк 1 ₽, счет карты» — кэшбэк тут только приписка к покупке, убираем её.
+    if (/(покупк|оплат)/i.test(text)) text = text.replace(/,?\s*кэшб[эе]к\s+\d[\d ]*(?:[.,]\d{1,2})?\s*₽/i, '');
     var re = /(\d[\d ]*(?:[.,]\d{1,2})?)\s*(?:₽|руб\.?|RUB|р\.)/i;
     var m = text.match(re);
     if (!m) return null;
