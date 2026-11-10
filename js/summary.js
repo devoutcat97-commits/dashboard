@@ -279,9 +279,27 @@
   // ============================================================
   //  Обратный отсчёт до важных дат
   // ============================================================
+  // Особая дата: разовая или ежегодная (день рождения, праздник). Ближайшее наступление — начиная с from.
+  function nextDate(c, from) {
+    from = from || U.today();
+    if (!c.yearly) return c.date;
+    var md = c.date.slice(5);
+    var y = +from.slice(0, 4);
+    function make(year) {
+      var leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+      return year + '-' + (md === '02-29' && !leap ? '02-28' : md);
+    }
+    var d = make(y);
+    return d >= from ? d : make(y + 1);
+  }
+  var CD_AHEAD = 7;   // особые даты появляются на Сводке за неделю
+
   function countdowns() {
     var today = U.today(), out = [];
-    Store.list('countdowns').forEach(function (c) { if (c.date >= today) out.push({ id: c.id, emoji: c.emoji || '📅', title: c.title, date: c.date, custom: true }); });
+    Store.list('countdowns').forEach(function (c) {
+      var d = nextDate(c);
+      if (d >= today && daysUntil(d) <= CD_AHEAD) out.push({ id: c.id, emoji: c.emoji || '📅', title: c.title, date: d, custom: true });
+    });
     var kinds = (Tabs.study && Tabs.study.examKinds) || {};
     var exam = Store.list('study.exams').filter(function (e) { return !e.result && e.date && e.date >= today; })
       .sort(function (a, b) { return a.date.localeCompare(b.date); })[0];
@@ -307,7 +325,36 @@
         esc(c.title + '\n' + WD_FULL[U.toDate(c.date).getDay()] + ', ' + U.toDate(c.date).getDate() + ' ' + U.monthGen(c.date)) + '">' +
         '<span class="cd-emoji">' + c.emoji + '</span><span class="cd-text"><b>' + when + '</b><small>' + esc(c.title) + '</small></span></button>';
     }).join('');
-    return '<div class="countdowns">' + chips + '<button type="button" class="cd-chip cd-add" data-cd-new="1">＋ <span>Важная дата</span></button></div>';
+    var total = Store.list('countdowns').length;
+    return '<div class="countdowns">' + chips +
+      (total ? '<button type="button" class="cd-chip cd-add" data-cd-all="1">📅 <span>Особые даты · ' + total + '</span></button>' : '') +
+      '<button type="button" class="cd-chip cd-add" data-cd-new="1">＋ <span>Особая дата</span></button></div>';
+  }
+
+  // Список всех особых дат (на Сводке видны только ближайшие — за неделю).
+  function allDatesDialog() {
+    var list = Store.list('countdowns').map(function (c) { return { c: c, d: nextDate(c) }; })
+      .sort(function (a, b) { return a.d.localeCompare(b.d); });
+    var dlg = document.createElement('dialog');
+    dlg.className = 'sheet';
+    dlg.innerHTML = '<div class="sheet-form"><div class="sheet-head"><h2>Особые даты</h2><button type="button" class="icon-x" data-close aria-label="Закрыть">' +
+      '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div><div class="sheet-body"><ul class="plan-list">' +
+      list.map(function (x) {
+        var n = daysUntil(x.d);
+        var when = x.d < U.today() ? 'прошла' : n === 0 ? 'сегодня' : 'через ' + n + ' ' + U.plural(n, 'день', 'дня', 'дней');
+        return '<li class="plan-row"><button type="button" class="plan-main" data-cd-edit="' + esc(x.c.id) + '"><span class="tx-title">' + (x.c.emoji || '📅') + ' ' + esc(x.c.title) + '</span>' +
+          '<span class="tx-sub">' + U.toDate(x.d).getDate() + ' ' + U.monthGen(x.d) + (x.c.yearly ? ' · каждый год' : '') + ' · ' + when + '</span></button></li>';
+      }).join('') + '</ul><p class="field-hint">На Сводке дата появляется за неделю. Напоминания — за 7 дней, за 3 дня, накануне и в сам день.</p></div>' +
+      '<div class="sheet-foot"><button type="button" class="btn" data-cd-add2>＋ Добавить</button><span class="spacer"></span><button type="button" class="btn" data-close>Готово</button></div></div>';
+    dlg.addEventListener('click', function (e) {
+      if (e.target === dlg || e.target.closest('[data-close]')) { dlg.close(); return; }
+      var ed = e.target.closest('[data-cd-edit]');
+      if (ed) { dlg.close(); countdownDialog(Store.list('countdowns').find(function (c) { return c.id === ed.dataset.cdEdit; })); return; }
+      if (e.target.closest('[data-cd-add2]')) { dlg.close(); countdownDialog(null); }
+    });
+    dlg.addEventListener('close', function () { dlg.remove(); });
+    document.body.appendChild(dlg);
+    dlg.showModal();
   }
 
   var CD_EMOJI = ['📅', '✈️', '🎂', '🎓', '📝', '🎉', '🏖️', '💼', '❤️', '🏆'];
@@ -315,17 +362,19 @@
   function countdownDialog(c) {
     var editing = !!c;
     U.formDialog({
-      title: editing ? 'Важная дата' : 'Новая важная дата',
-      values: editing ? { title: c.title, date: c.date, emoji: c.emoji || '📅' } : { title: '', date: '', emoji: '📅' },
+      title: editing ? 'Особая дата' : 'Новая особая дата',
+      values: editing ? { title: c.title, date: c.date, emoji: c.emoji || '📅', yearly: c.yearly ? '1' : '0' } : { title: '', date: '', emoji: '🎂', yearly: '1' },
       fields: [
-        { name: 'title', type: 'text', label: 'Что за дата', placeholder: 'Например, поездка в Казань', maxlength: 60, autofocus: !editing },
+        { name: 'title', type: 'text', label: 'Что за дата', placeholder: 'Например, день рождения мамы', maxlength: 60, autofocus: !editing },
         { name: 'date', type: 'date', label: 'Когда' },
-        { name: 'emoji', type: 'chips', label: 'Значок', options: CD_EMOJI.map(function (e) { return { value: e, label: e }; }) }
+        { name: 'yearly', type: 'seg', label: 'Повторять', options: [{ value: '1', label: 'Каждый год' }, { value: '0', label: 'Один раз' }] },
+        { name: 'emoji', type: 'chips', label: 'Значок', options: CD_EMOJI.map(function (e) { return { value: e, label: e }; }) },
+        { type: 'hint', text: 'На Сводке дата появится за неделю. Напомню за 7 дней, за 3 дня, накануне и в сам день.' }
       ],
       onSubmit: function (v) {
         if (!(v.title || '').trim()) return 'Напиши, что за дата';
         if (!v.date) return 'Укажи дату';
-        var rec = { title: v.title.trim(), date: v.date, emoji: v.emoji || '📅' };
+        var rec = { title: v.title.trim(), date: v.date, emoji: v.emoji || '📅', yearly: v.yearly === '1' };
         if (editing) Store.update('countdowns', c.id, rec); else Store.add('countdowns', rec);
       },
       onDelete: editing ? function () { Store.remove('countdowns', c.id); } : null
@@ -495,7 +544,7 @@
         if (Math.min(Number(p.day) || 1, last) === day) out.push({ kind: 'money', title: 'Ожидается зарплата: ' + p.name + (p.amount ? ' ~' + U.money(p.amount) : ''), tab: 'work' });
       });
     }
-    Store.list('countdowns').forEach(function (c) { if (c.date === date) out.push({ kind: 'date', title: (c.emoji || '📅') + ' ' + c.title, tab: 'summary' }); });
+    Store.list('countdowns').forEach(function (c) { if (nextDate(c, date) === date) out.push({ kind: 'date', title: (c.emoji || '📅') + ' ' + c.title, tab: 'summary' }); });
     return out.sort(function (a, b) { return (a.time || '99').localeCompare(b.time || '99'); });
   }
 
@@ -553,7 +602,7 @@
       fields: function (v) {
         var f = [
           { name: 'kind', type: 'seg', label: 'Что добавить', rerender: true, options: [
-            { value: 'task', label: 'Задача' }, { value: 'hw', label: 'Задание' }, { value: 'event', label: 'Мероприятие' }, { value: 'date', label: 'Важная дата' }] },
+            { value: 'task', label: 'Задача' }, { value: 'hw', label: 'Задание' }, { value: 'event', label: 'Мероприятие' }, { value: 'date', label: 'Особая дата' }] },
           { name: 'title', type: 'text', label: 'Название', maxlength: 160, autofocus: true }
         ];
         if (v.kind === 'task') f.push({ name: 'job', type: 'seg', label: 'Работа', options: [{ value: 'office', label: 'Очная' }, { value: 'remote', label: 'Дистанционная' }] });
@@ -567,7 +616,7 @@
         if (v.kind === 'task') Store.add('work.tasks', { title: title, job: v.job, due: date, important: false, note: '', done: false });
         else if (v.kind === 'hw') Store.add('study.homework', { subject: v.subject, title: title, due: date, note: '', done: false });
         else if (v.kind === 'event') Store.add('study.events', { title: title, date: date, time: (v.time || '').trim(), place: '', role: 'Участник', note: '', todo: [] });
-        else Store.add('countdowns', { title: title, date: date, emoji: '📅' });
+        else Store.add('countdowns', { title: title, date: date, emoji: '📅', yearly: /рожд|праздн|годовщ/i.test(title) });
         U.toast('Добавлено на ' + U.toDate(date).getDate() + ' ' + U.monthGen(date));
       }
     });
@@ -738,6 +787,7 @@
     wrap.addEventListener('click', function (ev) {
       var a = ev.target.closest('a[href="#summary-today"]');
       if (a) { ev.preventDefault(); var tc = wrap.querySelector('.today-card'); if (tc) tc.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+      if (ev.target.closest('[data-cd-all]')) { allDatesDialog(); return; }
       var b = ev.target.closest('[data-cd], [data-cd-new]');
       if (b) { countdownDialog(b.dataset.cd ? Store.list('countdowns').find(function (c) { return c.id === b.dataset.cd; }) : null); return; }
       var qa = ev.target.closest('[data-qa]');
@@ -780,5 +830,5 @@
     });
   }
 
-  window.Tabs.summary = { render: render, agenda: agenda };
+  window.Tabs.summary = { render: render, agenda: agenda, nextDate: nextDate };
 })();

@@ -325,7 +325,7 @@
     var todayStr = U.today();
     var recLeft = 0;
     Store.list('recurring').forEach(function (r) {
-      var paid = allTx().some(function (t) { return t.recurringId === r.id && U.monthKey(t.date) === key; });
+      var paid = isRecPaid(r, key);
       if (!paid && recurringDate(r, key) >= todayStr) recLeft += r.amount;
     });
     var projected = U.round2(spent + perDay * (n - day) + recLeft);
@@ -819,7 +819,7 @@
     var todayStr = U.today();
 
     var recRows = rec.map(function (r) {
-      var paid = txs.some(function (t) { return t.recurringId === r.id && U.monthKey(t.date) === key; });
+      var paid = isRecPaid(r, key);
       var due = recurringDate(r, key);
       var when = '';
       if (!paid && key === currentMonth()) {
@@ -1292,10 +1292,21 @@
     if (prevKeys.length && day >= 7) {
       var cur = byGroupMonth(key), avg = {};
       prevKeys.forEach(function (k) { var g = byGroupMonth(k); Object.keys(g).forEach(function (id) { avg[id] = (avg[id] || 0) + g[id] / prevKeys.length; }); });
+      // Сравниваем не прогноз, а «сколько обычно потрачено к этому же числу месяца»:
+      // коммуналка или аренда платятся раз в начале месяца, и растягивать их на 30 дней нельзя.
+      var toDay = {};
+      prevKeys.forEach(function (k) {
+        inMonth(allTx(), k).forEach(function (t) {
+          if (t.type === 'expense' && !t.recurringId && +t.date.slice(8, 10) <= day) toDay[t.category] = (toDay[t.category] || 0) + t.amount / prevKeys.length;
+        });
+      });
+      // Регулярные платежи (аренда, подписки) — ожидаемые траты, их не подсвечиваем.
+      cur = {};
+      inMonth(allTx(), key).forEach(function (t) { if (t.type === 'expense' && !t.recurringId) cur[t.category] = (cur[t.category] || 0) + t.amount; });
       Object.keys(avg).forEach(function (id) {
-        var a = avg[id], proj = (cur[id] || 0) / day * n;
-        if (a >= 1000 && proj > a * 1.4) out.push({ emoji: '📈', level: 'warn', text: groupName(id) + ': в этом месяце идёт к ≈ ' + U.money(Math.round(proj / 10) * 10) + ' — на ' + Math.round((proj / a - 1) * 100) + '% больше обычного (≈ ' + U.money(Math.round(a / 10) * 10) + ')' });
-        else if (a >= 1500 && day >= 15 && proj < a * 0.6) out.push({ emoji: '📉', level: 'good', text: groupName(id) + ': тратишь заметно меньше обычного — так держать!' });
+        var a = avg[id], c = cur[id] || 0, t = toDay[id] || 0;
+        if (a >= 1000 && c > t * 1.4 && c - t >= 1500) out.push({ emoji: '📈', level: 'warn', text: groupName(id) + ': уже ' + U.money(Math.round(c)) + ' — обычно к ' + day + '-му числу ≈ ' + U.money(Math.round(t / 10) * 10) + ', а за весь месяц ≈ ' + U.money(Math.round(a / 10) * 10) });
+        else if (a >= 1500 && day >= 15 && c < t * 0.6) out.push({ emoji: '📉', level: 'good', text: groupName(id) + ': тратишь заметно меньше обычного — так держать!' });
       });
     }
     // Необычно крупная трата за 14 дней: втрое больше обычной траты в этой категории.
@@ -1614,6 +1625,19 @@
       if (!best || gap < bestGap) { best = t; bestGap = gap; }
     });
     return best;
+  }
+
+  // Регулярный платёж оплачен в этом месяце? Отмечен кнопкой «Внести» — или пришёл из выписки/уведомления:
+  // то же название (магазин) и похожая сумма (±15%), с той же карты.
+  function isRecPaid(r, key) {
+    var name = MD.descKey(r.name || '');
+    return allTx().some(function (t) {
+      if (U.monthKey(t.date) !== key) return false;
+      if (t.recurringId === r.id) return true;
+      if (t.type !== 'expense' || t.recurringId) return false;
+      var close = Math.abs(t.amount - r.amount) <= Math.max(1, r.amount * 0.15);
+      return close && name && MD.descKey(t.note || '') === name;
+    });
   }
 
   // ---------- Предупреждение о лимитах ----------
@@ -2727,7 +2751,7 @@
       debts: debtors().map(function (a) { return { id: a.id, name: a.name, balance: bal[a.id] || 0 }; }),
       recurring: Store.list('recurring').map(function (r) {
         var date = recurringDate(r, key);
-        var paid = allTx().some(function (t) { return t.recurringId === r.id && U.monthKey(t.date) === key; });
+        var paid = isRecPaid(r, key);
         return { id: r.id, name: r.name, amount: r.amount, date: date, paid: paid };
       })
     };

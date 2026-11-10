@@ -200,15 +200,15 @@
       case 'date':
         return '<label class="field' + half + '">' + label + '<input type="date" name="' + f.name + '" value="' + esc(v) + '"></label>';
       case 'number':
-        return '<label class="field' + half + '">' + label + '<input type="number" inputmode="numeric" name="' + f.name + '" value="' + esc(v) + '"' +
+        return '<label class="field' + half + '">' + label + '<input type="number" inputmode="numeric" autocomplete="off" name="' + f.name + '" value="' + esc(v) + '"' +
           (f.min != null ? ' min="' + f.min + '"' : '') + (f.max != null ? ' max="' + f.max + '"' : '') + af + '></label>';
       case 'textarea':
-        return '<label class="field' + half + '">' + label + '<textarea name="' + f.name + '" rows="' + (f.rows || 3) + '" maxlength="' + (f.maxlength || 500) + '"' +
+        return '<label class="field' + half + '">' + label + '<textarea autocomplete="off" name="' + f.name + '" rows="' + (f.rows || 3) + '" maxlength="' + (f.maxlength || 500) + '"' +
           (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + esc(v) + '</textarea></label>';
       case 'hint':
         return '<p class="field field-hint">' + esc(f.text) + '</p>';
       default:
-        return '<label class="field' + half + '">' + label + '<input type="text" name="' + f.name + '" value="' + esc(v) + '"' +
+        return '<label class="field' + half + '">' + label + '<input type="text" autocomplete="off" name="' + f.name + '" value="' + esc(v) + '"' +
           (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + ' maxlength="' + (f.maxlength || 80) + '"' + af + '></label>';
     }
   }
@@ -218,7 +218,7 @@
     var dlg = document.createElement('dialog');
     dlg.className = 'sheet';
     dlg.innerHTML =
-      '<form class="sheet-form" novalidate>' +
+      '<form class="sheet-form" novalidate autocomplete="off">' +
         '<div class="sheet-head"><h2>' + esc(o.title) + '</h2>' +
           '<button type="button" class="icon-x" data-close aria-label="Закрыть">' +
             '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
@@ -372,3 +372,9 @@
     download: download, pickFile: pickFile, decodeText: decodeText
   };
 })();
+
+// autocomplete-guard: браузер не должен подсовывать ранее введённые тексты (дни рождения, заметки и т.п.)
+document.addEventListener('focusin', function (e) {
+  var el = e.target;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.hasAttribute('autocomplete')) el.setAttribute('autocomplete', 'off');
+}, true);

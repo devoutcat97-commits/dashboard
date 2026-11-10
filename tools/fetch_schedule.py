@@ -21,7 +21,7 @@ import urllib.request
 BASE = "https://alt.ranepa.ru"
 FORM = "fo1"  # бакалавриат, очная форма
 GROUP = sys.argv[1] if len(sys.argv) > 1 else "3231В"
-WEEKS_AHEAD = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+WEEKS_AHEAD = int(sys.argv[2]) if len(sys.argv) > 2 else 12   # с запасом: видно сессию заранее
 WEEKS_BACK = 1
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "schedule.json")
 UA = "Mozilla/5.0 (personal study dashboard; schedule fetch once a day)"
@@ -32,10 +32,17 @@ def week_url(monday):
     return f"{BASE}/shedule/{FORM}/{group}/{monday.isoformat()}/"
 
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode("utf-8", "replace")
+def fetch(url, tries=4):
+    # Сайт иногда не отвечает с первого раза — пробуем несколько раз с паузой.
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=40) as r:
+                return r.read().decode("utf-8", "replace")
+        except Exception:
+            if i == tries - 1:
+                raise
+            time.sleep(5 * (i + 1))
 
 
 def text(fragment):
@@ -79,20 +86,29 @@ def parse_week(page):
 def main():
     today = dt.date.today()
     monday = today - dt.timedelta(days=today.weekday())
+    # Прежний файл: если какую-то неделю скачать не удалось, оставляем её старую версию.
+    old = {}
+    try:
+        with open(OUT, encoding="utf-8") as f:
+            old = {w["start"]: w for w in json.load(f).get("weeks", [])}
+    except (OSError, ValueError):
+        pass
     weeks = []
     for i in range(-WEEKS_BACK, WEEKS_AHEAD):
         start = monday + dt.timedelta(weeks=i)
         try:
             page = fetch(week_url(start))
-        except Exception as e:  # сайт недоступен — пропускаем неделю, но не падаем целиком
+        except Exception as e:  # сайт недоступен — берём прежнюю версию недели, если она есть
             print(f"неделя {start}: ошибка {e}")
+            if start.isoformat() in old:
+                weeks.append(old[start.isoformat()])
             continue
         lessons = parse_week(page)
         weeks.append({"start": start.isoformat(), "lessons": lessons})
         print(f"неделя {start}: {len(lessons)} пар")
         time.sleep(1)  # не нагружаем сайт
 
-    if not weeks:
+    if not any(w for w in weeks):
         print("Не удалось загрузить ни одной недели — старый файл не трогаю.")
         sys.exit(1)
 

@@ -103,6 +103,18 @@
       add('evening|' + date, at(date, '21:00'), '🌙 Итог дня', cap(eve.join(' · ')) + '. Загляни в дашборд — план на завтра.', 'summary');
     }
 
+    // Особые даты (дни рождения, праздники): за 7 дней, за 3 дня, накануне и в сам день.
+    var nextDate = T.summary && T.summary.nextDate;
+    if (nextDate) Store.list('countdowns').forEach(function (c) {
+      var d = nextDate(c, today);
+      [[7, 'Через неделю'], [3, 'Через 3 дня'], [1, 'Завтра'], [0, 'Сегодня']].forEach(function (o) {
+        var day = addDays(d, -o[0]);
+        if (day < today) return;
+        add('date|' + c.id + '|' + d + '|' + o[0], at(day, o[0] ? '10:00' : '09:00'), (c.emoji || '📅') + ' ' + o[1] + ': ' + c.title,
+          U.toDate(d).getDate() + ' ' + U.monthGen(d) + (o[0] ? '' : ' — не забудь поздравить!'), 'summary');
+      });
+    });
+
     // Перерасход недели — сразу (один раз за неделю)
     var wk = T.money && T.money.weekly ? T.money.weekly() : null;
     if (wk && wk.spent / wk.amount >= 0.85) {

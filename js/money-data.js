@@ -668,8 +668,10 @@
     var bankName = '';
     var bm = action.match(/^(.*?)\s*(перевод|покупка|оплата|пополнение|списание)(?=\s|$)/i);
     if (bm && bm[1]) { bankName = bm[1].trim(); action = action.slice(bm[1].length).trim(); }
-    desc = desc.replace(/^сч[её]т\s+[A-Z]{3}\.?\s*/i, '').trim();
-    if (bankName && desc && !/^(накоп|копилк|вклад)/i.test(desc)) desc += ' (' + bankName + ')';
+    desc = desc.replace(/^сч[её]т(\s+карты)?(\s+[A-Z]{3})?\.?\s*/i, '').trim();
+    // «AKADEMIYA BAR Покупка на 60 ₽, счет карты» — впереди не банк, а магазин.
+    if (bankName && !desc) desc = bankName;
+    else if (bankName && desc && !/^(накоп|копилк|вклад)/i.test(desc)) desc += ' (' + bankName + ')';
     if (!desc) desc = action;
     var own = PUSH_OWN.test(text);
     var incoming = PUSH_IN.test(action || text) && !/^(покупк|оплат|списан|перевод\b(?! от))/i.test(action);

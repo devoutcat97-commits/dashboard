@@ -52,6 +52,8 @@
       schedule = d;
       scheduleState = 'fresh';
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch (e) {}
+      // Данные из облака могут прийти чуть позже — дадим им пару секунд, чтобы не создать дубли.
+      setTimeout(syncSession, 4000);
       refresh();
     })
     .catch(function () {
@@ -71,6 +73,40 @@
     return out.sort(function (a, b) { return (a.date + a.start).localeCompare(b.date + b.start); });
   }
   function lessonsOn(date) { return allLessons().filter(function (l) { return l.date === date; }); }
+
+  // Сессия из расписания сайта: экзамены и зачёты сами попадают в «Оценки → Сессия».
+  // Консультации остаются в расписании как обычные пары. Добавленное вручную не трогаем.
+  function sessionKind(type) {
+    var t = String(type || '').toLowerCase();
+    if (/^экз/.test(t)) return 'exam';
+    if (/диф/.test(t) && /зач/.test(t)) return 'diff';
+    if (/зач/.test(t)) return 'credit';
+    return '';
+  }
+  function syncSession() {
+    if (!schedule) return;
+    var today = U.today();
+    var exams = Store.list('study.exams');
+    var seen = {};   // экзамены, уже обновлённые в этот проход (вторая строка того же дня — не трогаем)
+    allLessons().forEach(function (l) {
+      var kind = sessionKind(l.type);
+      if (!kind || l.date < today) return;
+      var note = 'По расписанию: ' + l.start + (l.room ? ', ауд. ' + l.room : '') + (l.teacher ? ', ' + l.teacher : '');
+      var same = exams.find(function (e) { return e.subject === l.subject && e.kind === kind && !e.result; });
+      if (!same) {
+        var rec = Store.add('study.exams', { subject: l.subject, kind: kind, date: l.date, semester: currentSemester(), result: '', note: note, fromSchedule: true, tickets: [] });
+        seen[rec.id] = true;
+        exams.push(rec);
+      } else if (same.fromSchedule && same.date === l.date && same.note !== note && seen[same.id]) {
+        // вторая строка того же экзамена в тот же день — оставляем время начала
+      } else if (same.fromSchedule && (same.date !== l.date || same.note !== note)) {
+        seen[same.id] = true;
+        Store.update('study.exams', same.id, { date: l.date, note: note });
+      } else if (!same.date) {
+        Store.update('study.exams', same.id, { date: l.date });
+      }
+    });
+  }
   function subjects() {
     var set = {};
     allLessons().forEach(function (l) { set[l.subject] = true; });
