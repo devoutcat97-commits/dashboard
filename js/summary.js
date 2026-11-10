@@ -494,7 +494,8 @@
     return (
       '<section class="summary-block">' +
         '<div class="section-row"><h2 class="section-title">' + ico('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>') + 'Неделя в цифрах</h2>' +
-          (weekReportVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-wr-open="1">📊 Отчёт недели</button>') + '</div>' +
+          '<span class="section-btns"><a class="btn btn-small btn-ghost" href="#time">⏱️ Время</a>' +
+          (weekReportVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-wr-open="1">📊 Отчёт недели</button>') + '</span></div>' +
         '<div class="grid grid--4">' +
           (time ? tile('Часов записано', time.text, 'прошлая неделя — ' + time.prevText, '#time') : '') +
           tile('Закрыто дел', String(closed), 'задачи и задания с понедельника', '#work') +

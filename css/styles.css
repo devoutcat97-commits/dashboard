@@ -2171,3 +2171,9 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .qr-manual { margin-top: 12px; }
 .tile-value.is-bad { color: var(--critical-text); }
 .shop-promo { font-size: 12px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--warning) 22%, transparent); white-space: nowrap; }
+
+/* На телефоне во вкладки внизу помещается 5 значков — «Время» открывается со Сводки */
+@media (max-width: 859.98px) {
+  .nav a[data-tab="time"] { display: none; }
+}
+.section-btns { display: inline-flex; gap: 6px; flex-wrap: wrap; }
