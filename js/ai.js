@@ -65,6 +65,16 @@
       else { bal[t.account] -= t.amount; bal[t.to] = (bal[t.to] || 0) + t.amount; }
     });
     lines.push('ОСТАТКИ: ' + Object.keys(bal).map(function (k) { return k + '=' + round2(bal[k]); }).join(', '));
+    // Бюджеты, регулярные платежи — для вопросов «сколько осталось», «что платить»
+    var wk = window.Tabs.money && Tabs.money.weekly ? Tabs.money.weekly() : null;
+    lines.push('БЮДЖЕТ НА НЕДЕЛЮ (пн–вс, группы ' + (wk ? wk.groups.join(', ') : '—') + '): ' + (wk ? 'лимит ' + wk.amount + ', потрачено ' + round2(wk.spent) + ', осталось ' + round2(wk.left) + ', дней до воскресенья ' + wk.daysLeft + ', можно в день ≈ ' + wk.perDay : 'не задан'));
+    var ov = window.Tabs.money && Tabs.money.overview ? Tabs.money.overview() : null;
+    if (ov) {
+      lines.push('БЮДЖЕТ НА МЕСЯЦ: ' + (ov.budget ? 'лимит ' + ov.budget + ', осталось ' + round2(ov.left) : 'не задан') + '; потрачено за месяц ' + round2(ov.expenses));
+      if (ov.recurring && ov.recurring.length) lines.push('РЕГУЛЯРНЫЕ ПЛАТЕЖИ (месяц): ' + ov.recurring.map(function (r) { return r.name + ' ' + r.amount + ' ₽, ' + r.date + (r.paid ? ' — оплачено' : ' — не оплачено'); }).join('; '));
+    }
+    var accs = accounts();
+    lines.push('СЧЕТА ПОДРОБНО: ' + accs.map(function (a) { return a.name + ' (' + (a.kind === 'piggy' ? 'копилка' : a.kind === 'debt' ? 'долги: плюс — мне должны, минус — я должен' : 'счёт') + ') = ' + round2(bal[a.id] || 0); }).join('; '));
 
     // Последние операции (чтобы можно было исправлять/удалять)
     var recent = tx.slice().sort(function (a, b) { return (b.date + (b.createdAt || '')).localeCompare(a.date + (a.createdAt || '')); }).slice(0, 60);
