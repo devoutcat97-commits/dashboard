@@ -4,34 +4,45 @@
    ============================================================ */
 :root {
   color-scheme: light;
-  --bg: #f7f6f3;
+  --bg: #f1eff8;
   --surface: #ffffff;
-  --surface-2: #efede8;
-  --text: #1d1d1b;
-  --text-2: #62615c;
-  --text-3: #74726c;
-  --border: #e6e3dd;
-  --accent: #2f6f62;
-  --accent-soft: #e1eeea;
-  --accent-deep: #2f6f62; /* для цветной шапки — одинаковый в светлой и тёмной теме */
+  --surface-2: #ece8fb;
+  --text: #17142b;
+  --text-2: #5d5874;
+  --text-3: #625d7a;
+  --border: #e4e0f0;
+  --accent: #5b45d6;
+  --accent-soft: #ece8fb;
+  --accent-deep: #17142b; /* тёмная главная плитка */
   --good: #16a34a;
-  --shadow: 0 1px 2px rgba(25, 25, 20, .04), 0 2px 10px rgba(25, 25, 20, .04);
+  --shadow: 0 1px 2px rgba(23, 20, 43, .04), 0 6px 18px rgba(23, 20, 43, .06);
   --input-bg: #ffffff;
-  --overlay: rgba(20, 20, 18, .38);
+  --overlay: rgba(23, 20, 43, .4);
+  /* гибрид «плитки + фокус» */
+  --lime: #d4f55a;
+  --on-lime: #17142b;
+  --hero: #17142b;
+  --hero-ink: #ffffff;
+  --hero-num: #ffffff;
+  --t-study: #d9ccff; --t-study-ink: #2a1d63;
+  --t-task: #c4f1da;  --t-task-ink: #0f4a2e;
+  --t-peach: #ffd6c2; --t-peach-ink: #6b2a10;
+  --t-sky: #cfe6ff;   --t-sky-ink: #0f3a66;
+  --font-num: "Unbounded", var(--font);
   /* графики */
-  --series-1: #2a78d6;
+  --series-1: #5b45d6;
   --series-2: #eb6834;
-  --grid: #ebe9e3;
-  --axis: #c9c7bf;
-  --ink-muted: #898781;
+  --grid: #ebe8f3;
+  --axis: #c9c4da;
+  --ink-muted: #847f99;
   /* состояния */
   --critical: #d03b3b;
   --critical-text: #b42f2f;
   --warning: #e09a00;
   --good-text: #006300;
 
-  --radius: 14px;
-  --radius-sm: 10px;
+  --radius: 22px;
+  --radius-sm: 12px;
   --font: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --tabbar-h: 62px;
 }
@@ -39,23 +50,31 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #151514;
-    --surface: #1e1e1c;
-    --surface-2: #272725;
-    --text: #ecebe7;
-    --text-2: #a5a39d;
-    --text-3: #908e88;
-    --border: #2f2e2b;
-    --accent: #6fc2ad;
-    --accent-soft: #1f3631;
+    --bg: #0f0f12;
+    --surface: #1a1a20;
+    --surface-2: #24232c;
+    --text: #f1f0f5;
+    --text-2: #a9a7b6;
+    --text-3: #a7a5b4;
+    --border: #2c2b35;
+    --accent: #d4f55a;
+    --accent-soft: #2a3313;
+    --accent-deep: #1f2116;
     --shadow: none;
-    --input-bg: #232321;
-    --overlay: rgba(0, 0, 0, .55);
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --grid: #2c2c2a;
-    --axis: #3d3d3a;
-    --ink-muted: #898781;
+    --input-bg: #1f1f26;
+    --overlay: rgba(0, 0, 0, .6);
+    --hero: #1f2116;
+    --hero-ink: #f1f0e8;
+    --hero-num: #d4f55a;
+    --t-study: #2b2450; --t-study-ink: #d9ccff;
+    --t-task: #173a2b;  --t-task-ink: #b6f0d2;
+    --t-peach: #3e2418; --t-peach-ink: #ffc9b0;
+    --t-sky: #16304a;   --t-sky-ink: #bfe3ff;
+    --series-1: #9d8cff;
+    --series-2: #ff8a65;
+    --grid: #2a2a33;
+    --axis: #3b3a46;
+    --ink-muted: #8d8b9b;
     --critical: #e66767;
     --critical-text: #f08080;
     --warning: #fab219;
@@ -65,23 +84,31 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #151514;
-  --surface: #1e1e1c;
-  --surface-2: #272725;
-  --text: #ecebe7;
-  --text-2: #a5a39d;
-  --text-3: #908e88;
-  --border: #2f2e2b;
-  --accent: #6fc2ad;
-  --accent-soft: #1f3631;
+  --bg: #0f0f12;
+  --surface: #1a1a20;
+  --surface-2: #24232c;
+  --text: #f1f0f5;
+  --text-2: #a9a7b6;
+  --text-3: #a7a5b4;
+  --border: #2c2b35;
+  --accent: #d4f55a;
+  --accent-soft: #2a3313;
+  --accent-deep: #1f2116;
   --shadow: none;
-  --input-bg: #232321;
-  --overlay: rgba(0, 0, 0, .55);
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --grid: #2c2c2a;
-  --axis: #3d3d3a;
-  --ink-muted: #898781;
+  --input-bg: #1f1f26;
+  --overlay: rgba(0, 0, 0, .6);
+  --hero: #1f2116;
+  --hero-ink: #f1f0e8;
+  --hero-num: #d4f55a;
+  --t-study: #2b2450; --t-study-ink: #d9ccff;
+  --t-task: #173a2b;  --t-task-ink: #b6f0d2;
+  --t-peach: #3e2418; --t-peach-ink: #ffc9b0;
+  --t-sky: #16304a;   --t-sky-ink: #bfe3ff;
+  --series-1: #9d8cff;
+  --series-2: #ff8a65;
+  --grid: #2a2a33;
+  --axis: #3b3a46;
+  --ink-muted: #8d8b9b;
   --critical: #e66767;
   --critical-text: #f08080;
   --warning: #fab219;
@@ -2032,7 +2059,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 :root[data-theme="dark"] .qa-ico { background: color-mix(in srgb, var(--accent) 18%, #1c1c1a); }
 
 /* ---------- Финансы: поездки, тренды, капитал, кэшбэк, неделя ---------- */
-.chip-btn.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); font-weight: 600; }
+.chip-btn.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--text); font-weight: 600; }
 .trip.is-active { box-shadow: 0 0 0 2px var(--accent) inset; }
 .trip .ring-row { gap: 12px; }
 .trip-cats { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -2208,70 +2235,95 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .env-test body::before { content: 'ТЕСТОВАЯ КОПИЯ — данные отдельно от основного дашборда'; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: #d97706; color: #fff; font: 600 11px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }
 
 /* ============================================================
-   Цвет вкладки: у каждого раздела свой оттенок.
-   Шапка раздела — цветная, в том же стиле, что главная карточка «Сводки»;
-   этот же цвет подхватывают иконки разделов, активный переключатель и меню.
+   Стиль «Плитки + фокус»: крупные округлые цифры, цветные плитки,
+   салатовый акцент для главного. Светлая и тёмная тема — через переменные вверху файла.
    ============================================================ */
-:root { --tab: var(--accent-deep); --tab-2: #134e4a; --tab-ink: var(--accent); --tab-soft: var(--accent-soft); }
-:root[data-tab="money"] { --tab: #0f766e; --tab-2: #134e4a; --tab-ink: #0f766e; --tab-soft: #dcf1ec; }
-:root[data-tab="shop"]  { --tab: #c2410c; --tab-2: #7c2d12; --tab-ink: #c2410c; --tab-soft: #fde9dc; }
-:root[data-tab="work"]  { --tab: #1d4ed8; --tab-2: #1e3a8a; --tab-ink: #1d4ed8; --tab-soft: #e1e9fc; }
-:root[data-tab="study"] { --tab: #6d28d9; --tab-2: #3b0764; --tab-ink: #6d28d9; --tab-soft: #ece4fb; }
-:root[data-tab="time"]  { --tab: #b45309; --tab-2: #78350f; --tab-ink: #b45309; --tab-soft: #fbecd6; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"])[data-tab="money"] { --tab-ink: #5eead4; --tab-soft: #173a35; }
-  :root:not([data-theme="light"])[data-tab="shop"]  { --tab-ink: #fdba74; --tab-soft: #3d2618; }
-  :root:not([data-theme="light"])[data-tab="work"]  { --tab-ink: #93c5fd; --tab-soft: #1c2a47; }
-  :root:not([data-theme="light"])[data-tab="study"] { --tab-ink: #c4b5fd; --tab-soft: #2b2045; }
-  :root:not([data-theme="light"])[data-tab="time"]  { --tab-ink: #fcd34d; --tab-soft: #3a2c14; }
-}
-:root[data-theme="dark"][data-tab="money"] { --tab-ink: #5eead4; --tab-soft: #173a35; }
-:root[data-theme="dark"][data-tab="shop"]  { --tab-ink: #fdba74; --tab-soft: #3d2618; }
-:root[data-theme="dark"][data-tab="work"]  { --tab-ink: #93c5fd; --tab-soft: #1c2a47; }
-:root[data-theme="dark"][data-tab="study"] { --tab-ink: #c4b5fd; --tab-soft: #2b2045; }
-:root[data-theme="dark"][data-tab="time"]  { --tab-ink: #fcd34d; --tab-soft: #3a2c14; }
 
-/* Цветная шапка раздела */
-.view .page-head {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  padding: 22px 22px 20px;
-  border-radius: 22px;
-  color: #fff;
-  background: linear-gradient(125deg, var(--tab), var(--tab-2));
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--tab) 28%, transparent);
+/* Цифры и заголовки — округлый шрифт Unbounded */
+.page-head h1, .hero-panel h1 { font-family: var(--font-num); font-weight: 700; letter-spacing: -.02em; }
+.page-head h1 { font-size: 26px; }
+.hero-value, .hero-stat-value, .tile-value, .stat-value, .dayend-stats b, .cd-text b { font-family: var(--font-num); font-weight: 700; letter-spacing: -.02em; }
+@media (max-width: 859.98px) { .page-head h1 { font-size: 22px; } }
+
+/* Главные кнопки — салатовые с тёмным текстом (в обеих темах) */
+.btn-primary { background: var(--lime); border-color: var(--lime); color: var(--on-lime); font-weight: 600; }
+.btn-primary:hover { border-color: var(--lime); filter: brightness(.97); box-shadow: 0 6px 16px color-mix(in srgb, var(--lime) 45%, transparent); }
+.fab { background: var(--lime); color: var(--on-lime); border-radius: 20px; }
+@media (max-width: 859.98px) { .fab { box-shadow: 0 10px 24px rgba(23, 20, 43, .22); } }
+
+/* Карточки: мягче и с рамкой — в тёмной теме не сливаются с фоном */
+.card { border-radius: var(--radius); }
+
+/* Переключатели подразделов: выбранный — тёмная «таблетка» */
+.segmented { border-radius: 14px; background: var(--surface-2); }
+.segmented button { border-radius: 11px; }
+.segmented button[aria-selected="true"] { background: var(--text); color: var(--bg); box-shadow: none; font-weight: 600; }
+
+/* ---------- Шапка Сводки: тёмная плитка с цветными плитками внутри ---------- */
+.hero-panel, .hero-panel[class*="tod-"] {
+  background: var(--hero);
+  color: var(--hero-ink);
+  animation: none;
+  border-radius: 26px;
+  box-shadow: 0 14px 30px rgba(23, 20, 43, .18);
 }
-.view .page-head::before, .view .page-head::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .09);
-  pointer-events: none;
-}
-.view .page-head::before { width: 200px; height: 200px; right: -50px; top: -100px; }
-.view .page-head::after { width: 120px; height: 120px; right: 110px; bottom: -78px; }
-.view .page-head h1 { color: #fff; font-weight: 700; letter-spacing: -.02em; }
-.view .page-head .lead { color: rgba(255, 255, 255, .86); }
-.view .page-head .btn-primary:not(.fab), .view .page-head .btn-primary { background: #fff; color: var(--tab-2); border-color: transparent; }
+.hero-panel::before, .hero-panel::after { background: rgba(255, 255, 255, .05); }
+.hero-panel .hero-sky { display: none; }
+.hero-date { opacity: .75; }
+.hero-panel h1 { font-size: 26px; }
+.weather { background: rgba(255, 255, 255, .1); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.hero-stat { border-radius: 18px; padding: 12px; }
+.hero-stat-label, .hero-stat-hint { opacity: 1; }
+.hero-stat:nth-child(1) { background: var(--t-study); color: var(--t-study-ink); }
+.hero-stat:nth-child(2) { background: var(--t-task); color: var(--t-task-ink); }
+.hero-stat:nth-child(3) { background: var(--lime); color: var(--on-lime); }
+.hero-stat:hover { background: inherit; filter: brightness(1.04); transform: translateY(-1px); }
+.hero-stat:nth-child(1):hover { background: var(--t-study); }
+.hero-stat:nth-child(2):hover { background: var(--t-task); }
+.hero-stat:nth-child(3):hover { background: var(--lime); }
+.hero-stat-value { font-size: 24px; }
 @media (max-width: 859.98px) {
-  .view .page-head { padding: 18px 16px 16px; border-radius: 20px; }
-  .view .page-head .fab { background: var(--tab); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--tab) 40%, transparent); }
+  .hero-panel h1 { font-size: 21px; }
+  .hero-stat { padding: 10px; border-radius: 16px; }
+  .hero-stat-value { font-size: 18px; }
 }
 
-/* Цвет раздела в деталях */
-.card-head h2 .ico, .section-title .ico { color: var(--tab-ink); }
-.segmented button[aria-selected="true"] { color: var(--tab-ink); font-weight: 600; }
-.nav a[aria-current="page"] .ico { color: var(--tab-ink); }
-@media (max-width: 859.98px) {
-  .nav a[aria-current="page"] { color: var(--tab-ink); }
+/* Крупная сумма в «Деньгах» — тёмная плитка, как на Сводке */
+.hero-value { color: var(--text); }
+
+/* ---------- Меню ---------- */
+.nav a[aria-current="page"] { color: var(--text); font-weight: 600; }
+.nav a[aria-current="page"] .ico { color: var(--text); }
+@media (min-width: 860px) {
+  .nav-ind { background: var(--lime); outline: none; box-shadow: none; border-radius: 14px; }
+  .nav a[aria-current="page"], .nav a[aria-current="page"] .ico { color: var(--on-lime); }
 }
-.hero-value { color: var(--tab-ink); }
-::selection { background: color-mix(in srgb, var(--tab-ink) 28%, transparent); }
 @media (max-width: 859.98px) {
-  .nav-ind { background: var(--tab-soft); transition: transform .35s cubic-bezier(.2, .8, .2, 1), width .35s, height .35s, background-color .3s; }
+  .nav { background: var(--surface); background: color-mix(in srgb, var(--surface) 92%, transparent); }
+  .nav-ind { display: none; }
+  .nav a .ico { width: 40px; height: 28px; padding: 3px 9px; border-radius: 12px; transition: background-color .2s; }
+  .nav a[aria-current="page"] .ico { background: var(--lime); color: var(--on-lime); }
 }
-/* Главные кнопки внутри раздела — в цвет раздела */
-:root[data-tab]:not([data-tab="summary"]) .view .btn-primary:not(.page-head .btn-primary) { background: var(--tab); border-color: var(--tab); color: #fff; }
-:root[data-tab]:not([data-tab="summary"]) .view .btn-primary:not(.page-head .btn-primary):hover { background: var(--tab-2); border-color: var(--tab-2); }
+
+/* Главная сумма в «Деньгах» — тёмная плитка, как шапка Сводки */
+.money .card.hero:first-of-type, .money section.card.hero { background: var(--hero); color: var(--hero-ink); border-color: transparent; }
+.money .card.hero .hero-label, .money .card.hero .hero-meta { color: var(--hero-ink); opacity: .75; }
+.money .card.hero .hero-value { color: var(--hero-num); }
+.money .card.hero .link-btn { color: var(--lime); }
+.money .card.hero .ring-track { stroke: rgba(255, 255, 255, .14); }
+.money .card.hero .ring-bar { stroke: var(--lime); }
+.money .card.hero .ring-text { fill: var(--hero-ink); }
+
+/* Плитки с цифрами — цветные, по порядку: мятная, персиковая, сиреневая, голубая */
+.grid > .tile { border-color: transparent; box-shadow: none; }
+.grid > .tile:nth-child(4n+1) { background: var(--t-task); color: var(--t-task-ink); }
+.grid > .tile:nth-child(4n+2) { background: var(--t-peach); color: var(--t-peach-ink); }
+.grid > .tile:nth-child(4n+3) { background: var(--t-study); color: var(--t-study-ink); }
+.grid > .tile:nth-child(4n+4) { background: var(--t-sky); color: var(--t-sky-ink); }
+.grid > .tile .tile-label, .grid > .tile .tile-hint { color: inherit; opacity: .8; }
+.grid > .tile .tile-value { color: inherit; }
+.grid > .tile .tile-value.is-bad { color: var(--critical-text); }
+.grid > .tile .delta { color: inherit; opacity: .85; }
+:root[data-accent="green"] { --accent: #2f6f62; }
+@media (prefers-color-scheme: dark) { :root[data-accent="green"]:not([data-theme="light"]) { --accent: #6fc2ad; } }
+:root[data-theme="dark"][data-accent="green"] { --accent: #6fc2ad; }

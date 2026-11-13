@@ -62,7 +62,7 @@
     });
     if (window.FX) FX.moveIndicator(nav);
 
-    document.documentElement.dataset.tab = tab.id;   // у каждой вкладки свой цвет (см. «Цвет вкладки» в styles.css)
+    document.documentElement.dataset.tab = tab.id;
     if (Tabs[tab.id]) Tabs[tab.id].render(view);
     document.title = tab.id === 'summary' ? 'Мой дашборд' : tab.title + ' · Мой дашборд';
 
@@ -134,7 +134,8 @@
 
   // ---------- Цвет акцента ----------
   var ACCENTS = [
-    { id: 'emerald', name: 'Изумруд', color: '#2f6f62' },
+    { id: 'emerald', name: 'Стандартный', color: '#5b45d6' },
+    { id: 'green', name: 'Изумруд', color: '#2f6f62' },
     { id: 'blue', name: 'Синий', color: '#2563eb' },
     { id: 'violet', name: 'Фиолетовый', color: '#6d4fd8' },
     { id: 'rose', name: 'Малиновый', color: '#c2416b' },
