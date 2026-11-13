@@ -2162,7 +2162,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .ai-head .spacer { flex: 1; }
 .ai-list { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .ai-msg { max-width: 88%; padding: 9px 12px; border-radius: 14px; font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; }
-.ai-msg--me { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.ai-msg--me { align-self: flex-end; background: var(--accent); color: var(--surface); border-bottom-right-radius: 4px; white-space: pre-wrap; }
 .ai-msg--bot { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
 .ai-acts { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .ai-act { font-size: 13px; padding: 5px 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
@@ -2336,3 +2336,12 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .summary-col > * { min-width: 0; }
 /* Суммы и счётчики — цифры одной ширины, ничего не «прыгает» */
 .hero-value, .hero-stat-value, .tile-value, .stat-value, .tx-amt, .plan-amt, .dayend-stats b { font-variant-numeric: tabular-nums; }
+
+/* Нижнее меню на телефоне — чуть крупнее, в него легче попасть пальцем */
+@media (max-width: 859.98px) {
+  :root { --tabbar-h: 70px; }
+  .nav a { min-height: 58px; font-size: 12px; gap: 4px; }
+  .nav a .ico { width: 46px; height: 32px; padding: 4px 11px; border-radius: 14px; }
+}
+/* Покупки: плитки с цифрами и карточка ниже не слипаются */
+.shop .grid { margin-bottom: 12px; }

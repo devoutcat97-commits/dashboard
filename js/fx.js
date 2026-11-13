@@ -187,13 +187,24 @@
   // Элемент с data-swipe="id": вправо — «готово», влево — «удалить».
   // Обработчик решает вкладка: событие 'fx:swipe' с detail { dir, el }.
   // Свайп по свободному месту листает месяц/неделю (жмёт кнопку ‹ или ›).
-  var sx = 0, sy = 0, st = 0, item = null, moving = false, locked = null;
+  var sx = 0, sy = 0, st = 0, item = null, moving = false, locked = null, scroll0 = 0, inStrip = false;
+  // Палец начал жест внутри полосы, которая сама листается вбок (даты, быстрые действия, таблицы)?
+  function inSideScroller(el) {
+    for (; el && el !== document.body; el = el.parentElement) {
+      if (el.scrollWidth > el.clientWidth + 2) {
+        var ox = getComputedStyle(el).overflowX;
+        if (ox === 'auto' || ox === 'scroll') return true;
+      }
+    }
+    return false;
+  }
   document.addEventListener('touchstart', function (e) {
     if (e.touches.length !== 1) return;
     var t = e.touches[0];
-    sx = t.clientX; sy = t.clientY; st = Date.now(); moving = false; locked = null;
+    sx = t.clientX; sy = t.clientY; st = Date.now(); moving = false; locked = null; scroll0 = window.scrollY;
     item = e.target.closest('[data-swipe]');
-    if (e.target.closest('input, textarea, select, .segmented, .chart, dialog, .table-scroll')) { item = null; locked = 'skip'; }
+    inStrip = inSideScroller(e.target);
+    if (e.target.closest('input, textarea, select, .segmented, .chart, dialog, .table-scroll, .ai-panel, .sheet')) { item = null; locked = 'skip'; }
   }, { passive: true });
 
   document.addEventListener('touchmove', function (e) {
@@ -201,8 +212,9 @@
     var t = e.touches[0];
     var dx = t.clientX - sx, dy = t.clientY - sy;
     if (!locked) {
-      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) locked = 'x';
-      else if (Math.abs(dy) > 12) locked = 'y';
+      // Вертикальную прокрутку узнаём раньше, горизонтальный жест — только явный.
+      if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx) * 0.6) locked = 'y';
+      else if (Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 2) locked = 'x';
     }
     if (locked === 'x' && item) {
       moving = true;
@@ -230,7 +242,8 @@
         body.style.transform = '';
         delete el.dataset.swipeDir;
       }
-    } else if (locked === 'x' && !item && Math.abs(dx) > 80 && Math.abs(dy) < 50 && Date.now() - st < 600) {
+    } else if (locked === 'x' && !item && !inStrip && Math.abs(dx) > 90 && Math.abs(dy) < Math.min(40, Math.abs(dx) * 0.35) &&
+               Math.abs(window.scrollY - scroll0) < 8 && Date.now() - st < 600) {
       // Свайп по шапке вкладки (заголовок, переключатель месяца) листает месяц/неделю,
       // по остальному экрану — переключает вкладки.
       if (startedOnHead) {
