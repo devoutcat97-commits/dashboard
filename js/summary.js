@@ -260,7 +260,7 @@
           (o && o.budget
             ? stat('Можно сегодня', U.money(canSpendToday(o)), 'в бюджете ' + U.money(Math.max(0, o.left)), '#money')
             : wk
-            ? stat('Можно сегодня', U.money(wk.perDay), 'на неделю осталось ' + U.money(Math.max(0, wk.left)), '#money')
+            ? stat('Можно сегодня', U.money(wk.perDay), 'на неделю ещё ' + U.money(Math.round(Math.max(0, wk.left))), '#money')
             : stat('Траты сегодня', U.money(todaySpent), o ? 'за месяц ' + U.money(o.expenses) : '', '#money')) +
         '</div>' +
       '</section>'
