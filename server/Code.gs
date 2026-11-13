@@ -222,6 +222,7 @@ function text(s) { return ContentService.createTextOutput(s); }
 
 // ---------- 2. Push-уведомления ----------
 function sendDue() {
+  var sent = JSON.parse(props().getProperty('SENT') || '{}');
   allUsers().forEach(function (u) {
     try { sendDueFor(u, sent); } catch (err) { console.warn(u.root + '/' + u.uid + ': ' + err.message); }
   });
