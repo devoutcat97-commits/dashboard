@@ -196,7 +196,18 @@
       }).then(function (data) { if (data) got.push(data); }).catch(function () {});
     })).then(function () {
       got.sort(function (a, b) { return String(a.at).localeCompare(String(b.at)); });
-      if (got.length) Tabs.money.processInbox(got.map(function (g) { return { text: (g.title ? g.title + '. ' : '') + (g.text || ''), at: g.at }; }));
+      var items = got.map(function (g) { return { text: (g.title ? g.title + '. ' : '') + (g.text || ''), at: g.at }; });
+      try {
+        if (items.length) Tabs.money.processInbox(items);
+      } catch (e) {
+        // Из облака уведомления уже забраны — сохраняем их тут, чтобы не потерять.
+        try {
+          var keep = JSON.parse(localStorage.getItem('dash:inbox:failed') || '[]').concat(items);
+          localStorage.setItem('dash:inbox:failed', JSON.stringify(keep));
+        } catch (e2) {}
+        console.warn(e);
+        U.toast('Не получилось записать уведомление банка — оно сохранено, сообщи, разберёмся');
+      }
       inboxBusy = false;
       if (inboxAgain) {
         inboxAgain = false;

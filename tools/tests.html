@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка разборщиков</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+  .ok { color: #0a7a2f; } .bad { color: #b00020; font-weight: 600; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<h1>Проверка разборщиков</h1>
+<p>Открой эту страницу после правок в js/money-data.js: всё должно быть зелёным. Данные дашборда она не трогает.</p>
+<ul id="out"></ul>
+<script src="../js/ui.js"></script>
+<script src="../js/money-data.js"></script>
+<script>
+(function () {
+  var out = document.getElementById('out'), fails = 0;
+  function check(name, got, want) {
+    var ok = JSON.stringify(got) === JSON.stringify(want);
+    if (!ok) fails++;
+    var li = document.createElement('li');
+    li.className = ok ? 'ok' : 'bad';
+    li.textContent = (ok ? '✓ ' : '✗ ') + name + (ok ? '' : ' — получилось ' + JSON.stringify(got) + ', ждали ' + JSON.stringify(want));
+    out.appendChild(li);
+  }
+  var P = MoneyData.parseTBankPush, AT = '2026-11-13T12:30:00';
+  function push(t) { var o = P(t, AT); return o ? [o.amount, o.note] : null; }
+
+  // Уведомления банка
+  check('покупка', push('Покупка 450 ₽, Пятёрочка. Доступно 12 345 ₽'), [-450, 'Пятёрочка']);
+  check('копейки и пробел в тысячах', push('Покупка на 1 200,50 ₽, счет карты. ВКУСВИЛЛ')[0], -1200.5);
+  check('пополнение от человека — доход', push('Пополнение на 5 000 ₽ от Мария М.')[0], 5000);
+  check('кэшбэк в покупке не путает сумму', push('Покупка на 152 ₽, кэшбэк 1 ₽, счет карты')[0], -152);
+  check('код подтверждения пропускаем', push('Код: 4821. Никому не говорите. Покупка 450 ₽'), null);
+  check('код для входа пропускаем', push('Код для входа 1234 на сумму 99 ₽'), null);
+  check('реклама пропускается', push('Скидка 500 ₽ на первый заказ'), null);
+  check('без суммы — не операция', push('Ваша карта готова'), null);
+  check('дата из времени уведомления', P('Покупка 100 ₽, Магнит', AT).date, '2026-11-13');
+
+  // Быстрая запись «500 кофе вчера»
+  var Q = function (s) { return MoneyData.parseQuick(s, { accounts: [], learned: {} }); };
+  check('быстрая запись: сумма', Q('500 кофе').amount, 500);
+  check('быстрая запись: «1 250»', Q('1 250 продукты').amount, 1250);
+  check('быстрая запись: «2к»', Q('2к такси').amount, 2000);
+  check('быстрая запись: «+» — доход', Q('+3000 стипендия').explicitIncome, true);
+  check('быстрая запись: дата 05.11.2026', Q('300 обед 05.11.2026').date, '2026-11-05');
+
+  var h = document.createElement('h2');
+  h.className = fails ? 'bad' : 'ok';
+  h.textContent = fails ? 'Ошибок: ' + fails : 'Всё в порядке';
+  document.body.insertBefore(h, out);
+})();
+</script>
+</body>
+</html>
