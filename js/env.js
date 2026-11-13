@@ -6,5 +6,7 @@
   window.DASH_ENV = test ? 'test' : 'prod';
   window.DASH_ROOT = test ? 'users_test' : 'users';
   window.DASH_KEY = function (k) { return test ? k + ':test' : k; };
+  // Адрес сервера (Apps Script). У тестовой копии свой, чтобы проверять новое, не трогая рабочий.
+  window.DASH_SERVER = test ? '@@TEST@@' : '@@PROD@@';
   if (test) document.documentElement.classList.add('env-test');
 })();

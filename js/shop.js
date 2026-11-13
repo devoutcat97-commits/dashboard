@@ -56,7 +56,7 @@
     var q = open.filter(function (s) { return !lookup(prices(), s.text); }).map(function (s) { return s.text; }).slice(0, 25);
     U.toast('Узнаю цены в магазинах…');
     return Promise.all([server(), firebase.auth().currentUser.getIdToken()]).then(function (r) {
-      return fetch(r[0] + '?a=prices', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken: r[1], q: q, promos: true }) });
+      return fetch(r[0] + '?a=prices', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken: r[1], root: window.DASH_ROOT || 'users', q: q, promos: true }) });
     }).then(function (res) { return res.json(); }).then(function (d) {
       if (d.error) throw new Error(d.error);
       var SP = Object.assign({}, Store.getSetting('shop.sitePrices', {}) || {});
@@ -146,6 +146,7 @@
   var serverBase = '';
   function server() {
     if (serverBase) return Promise.resolve(serverBase);
+    if (window.DASH_SERVER && window.DASH_SERVER.indexOf('@@') < 0) return Promise.resolve(serverBase = window.DASH_SERVER);
     if (!window.Cloud || !Cloud._uid || !Cloud._uid()) return Promise.reject(new Error('Сначала войди в облако через Google'));
     return Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
       var info = d.exists ? JSON.parse(d.data().json || '{}') : {};
@@ -156,7 +157,7 @@
   }
   function fetchReceipt(qrraw) {
     return Promise.all([server(), firebase.auth().currentUser.getIdToken()]).then(function (r) {
-      return fetch(r[0] + '?a=check', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken: r[1], qrraw: qrraw }) });
+      return fetch(r[0] + '?a=check', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ idToken: r[1], root: window.DASH_ROOT || 'users', qrraw: qrraw }) });
     }).then(function (res) { return res.json(); }).then(function (d) { if (d.error) throw new Error(d.error); return d; });
   }
 

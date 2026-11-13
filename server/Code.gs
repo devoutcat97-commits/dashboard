@@ -38,26 +38,104 @@ function api(method, url, body) {
   if (code >= 300) throw new Error(method.toUpperCase() + ' ' + url.replace(FS, '') + ' → ' + code + ' ' + text.slice(0, 400));
   return text ? JSON.parse(text) : {};
 }
-function userPath(p) { return FS + 'users/' + uid() + '/' + p; }
-function getJson(p) {
-  var d = api('get', userPath(p));
+// ---------- Пользователи ----------
+// Каждый пользователь живёт в <root>/<uid>/…, где root = users (рабочий сайт) или users_test (тестовая копия).
+// Список пользователей и их секретные ключи для MacroDroid — в свойстве USERS: { "root/uid": "ключ" }.
+// Владелец (UID) работает всегда, даже если его нет в списке, — так старые настройки не ломаются.
+var ROOTS = { users: 1, users_test: 1 };
+function cleanRoot(r) { return ROOTS[r] ? r : 'users'; }
+function U(root, id) { return { root: cleanRoot(root), uid: id }; }
+function owner() { return U('users', uid()); }
+function base(u) { return FS + u.root + '/' + u.uid + '/'; }
+function getJsonU(u, p) {
+  var d = api('get', base(u) + p);
   return d && d.fields && d.fields.json ? JSON.parse(d.fields.json.stringValue) : null;
 }
-function setJson(p, obj) { api('patch', userPath(p), { fields: { json: { stringValue: JSON.stringify(obj) } } }); }
-function del(p) { api('delete', userPath(p)); }
+function setJsonU(u, p, obj) { api('patch', base(u) + p, { fields: { json: { stringValue: JSON.stringify(obj) } } }); }
+function delU(u, p) { api('delete', base(u) + p); }
+// Старые имена (для владельца) — чтобы прежние функции из редактора работали как раньше.
+function userPath(p) { return base(owner()) + p; }
+function getJson(p) { return getJsonU(owner(), p); }
+function setJson(p, obj) { setJsonU(owner(), p, obj); }
+function del(p) { delU(owner(), p); }
+
+function registry() { try { return JSON.parse(props().getProperty('USERS') || '{}'); } catch (e) { return {}; } }
+function allUsers() {
+  var list = Object.keys(registry()).map(function (k) { var a = k.split('/'); return U(a[0], a[1]); });
+  var o = owner();
+  if (!list.some(function (u) { return u.root === o.root && u.uid === o.uid; })) list.unshift(o);
+  return list;
+}
+function isOwner(id) { return id === props().getProperty('UID'); }
+
+// Кто прислал запрос: проверяем вход через Google и берём root из запроса.
+function caller(req) {
+  var id = req && req.idToken ? whoIs(req.idToken) : '';
+  return id ? U(req.root, id) : null;
+}
+
+// Дневные лимиты для всех, кроме владельца.
+var LIMITS = { ai: 30, check: 5, prices: 10 };
+var LIMIT_NAMES = { ai: 'вопросов к ИИ', check: 'чеков', prices: 'проверок цен' };
+function overLimit(u, kind) {
+  if (isOwner(u.uid)) return '';
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var day = Utilities.formatDate(new Date(), 'Asia/Barnaul', 'yyyyMMdd');
+    var key = 'LIM_' + day, p = props();
+    var all = JSON.parse(p.getProperty(key) || '{}');
+    var id = u.uid + ':' + kind;
+    if ((all[id] || 0) >= LIMITS[kind]) return 'На сегодня лимит ' + LIMIT_NAMES[kind] + ' исчерпан (' + LIMITS[kind] + ' в день). Завтра снова можно.';
+    all[id] = (all[id] || 0) + 1;
+    p.setProperty(key, JSON.stringify(all));
+    Object.keys(p.getProperties()).forEach(function (k) { if (/^LIM_\d{8}$/.test(k) && k !== key) p.deleteProperty(k); });
+    return '';
+  } finally { lock.releaseLock(); }
+}
+
+// Регистрация: дашборд вызывает после входа. Выдаёт личную ссылку для MacroDroid и кладёт её в <root>/<uid>/meta/hook.
+function register(e) {
+  var req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
+  var u = caller(req);
+  if (!u) return json({ error: 'Нужно войти в дашборд через Google' });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var key = '';
+  try {
+    var reg = registry(), k = u.root + '/' + u.uid;
+    if (u.root === 'users' && isOwner(u.uid)) key = props().getProperty('HOOK_KEY') || '';
+    key = key || reg[k] || Utilities.getUuid().replace(/-/g, '');
+    reg[k] = key;
+    props().setProperty('USERS', JSON.stringify(reg));
+  } finally { lock.releaseLock(); }
+  var url = execUrl() + '?k=' + key;
+  setJsonU(u, 'meta/hook', { url: url, at: new Date().toISOString() });
+  return json({ ok: true, url: url });
+}
+function execUrl() { return props().getProperty('EXEC_URL') || ScriptApp.getService().getUrl(); }
+function userByKey(key) {
+  if (!key) return null;
+  if (key === props().getProperty('HOOK_KEY')) return owner();
+  var reg = registry();
+  for (var k in reg) if (reg[k] === key) { var a = k.split('/'); return U(a[0], a[1]); }
+  return null;
+}
 
 // ---------- 1. Уведомления банка с телефона ----------
 function doPost(e) {
   if (e && e.parameter && e.parameter.a === 'ai') return aiChat(e);
   if (e && e.parameter && e.parameter.a === 'check') return receipt(e);
   if (e && e.parameter && e.parameter.a === 'prices') return sitePrices(e);
-  var key = (e && e.parameter && e.parameter.k) || '';
-  if (!key || key !== props().getProperty('HOOK_KEY')) return text('forbidden');
+  if (e && e.parameter && e.parameter.a === 'register') return register(e);
+  var who = userByKey((e && e.parameter && e.parameter.k) || '');
+  if (!who) return text('forbidden');
   var body = (e.postData && e.postData.contents) || (e.parameter && e.parameter.text) || '';
   body = String(body).replace(/\s+/g, ' ').trim().slice(0, 1000);
   // Коды подтверждения и пароли никогда не сохраняем.
   if (!/\d/.test(body) || /код|пароль|никому не сообщ/i.test(body)) return text('skip');
-  api('post', userPath('inbox'), { fields: {
+  api('post', base(who) + 'inbox', { fields: {
     text: { stringValue: body },
     at: { stringValue: new Date().toISOString() },
     source: { stringValue: 'macrodroid' }
@@ -93,7 +171,10 @@ function whoIs(idToken) {
 function aiChat(e) {
   var req;
   try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
-  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var u = caller(req);
+  if (!u) return json({ error: 'Нужно войти в дашборд через Google' });
+  var lim = overLimit(u, 'ai');
+  if (lim) return json({ error: lim });
   var body = {
     systemInstruction: { parts: [{ text: String(req.system || '').slice(0, 120000) }] },
     contents: (req.messages || []).slice(-16).map(function (m) {
@@ -141,18 +222,27 @@ function text(s) { return ContentService.createTextOutput(s); }
 
 // ---------- 2. Push-уведомления ----------
 function sendDue() {
-  var push = getJson('meta/push');
+  allUsers().forEach(function (u) {
+    try { sendDueFor(u, sent); } catch (err) { console.warn(u.root + '/' + u.uid + ': ' + err.message); }
+  });
+  var now = Date.now();
+  Object.keys(sent).forEach(function (k) { if (sent[k] < now - 4 * 864e5) delete sent[k]; });
+  props().setProperty('SENT', JSON.stringify(sent));
+}
+// Для владельца на рабочем сайте метка отправки — просто id (как раньше), для остальных — с приставкой.
+function sendDueFor(u, sent) {
+  var pre = (u.root === 'users' && isOwner(u.uid)) ? '' : u.root + '/' + u.uid + '/';
+  var push = getJsonU(u, 'meta/push');
   var tokens = push && push.tokens ? Object.keys(push.tokens) : [];
   if (!tokens.length) return;
-  var plan = getJson('meta/plan');
-  var test = getJson('meta/test');
+  var plan = getJsonU(u, 'meta/plan');
+  var test = getJsonU(u, 'meta/test');
   var now = Date.now();
-  var sent = JSON.parse(props().getProperty('SENT') || '{}');
   var items = (plan && plan.items) || [];
   if (test) items = items.concat([test]);
   var due = items.filter(function (it) {
     var t = Date.parse(it.at);
-    return t <= now + 30e3 && t > now - 20 * 60e3 && !sent[it.id];
+    return t <= now + 30e3 && t > now - 20 * 60e3 && !sent[pre + it.id];
   });
   var dead = {};
   due.forEach(function (it) {
@@ -173,15 +263,13 @@ function sendDue() {
       if (code === 404 || /UNREGISTERED|registration-token-not-registered/.test(out)) dead[t] = true;
       else if (code >= 300) console.warn('FCM ' + code + ' ' + out.slice(0, 400));
     });
-    sent[it.id] = now;
+    sent[pre + it.id] = now;
   });
-  Object.keys(sent).forEach(function (k) { if (sent[k] < now - 4 * 864e5) delete sent[k]; });
-  props().setProperty('SENT', JSON.stringify(sent));
-  if (test && (sent[test.id] || Date.parse(test.at) < now - 20 * 60e3)) del('meta/test');
+  if (test && (sent[pre + test.id] || Date.parse(test.at) < now - 20 * 60e3)) delU(u, 'meta/test');
   var deadList = Object.keys(dead);
   if (deadList.length) {
     deadList.forEach(function (t) { delete push.tokens[t]; });
-    setJson('meta/push', push);
+    setJsonU(u, 'meta/push', push);
   }
 }
 
@@ -230,11 +318,14 @@ function probe() {
 function receipt(e) {
   var req;
   try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
-  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var u = caller(req);
+  if (!u) return json({ error: 'Нужно войти в дашборд через Google' });
   var token = props().getProperty('PROVERKACHEKA_TOKEN');
   if (!token) return json({ error: 'Не задан ключ PROVERKACHEKA_TOKEN в свойствах сервера' });
   var qr = String(req.qrraw || '').trim();
   if (!/fn=\d+/.test(qr) || !/s=[\d.]+/.test(qr)) return json({ error: 'Это не QR-код кассового чека' });
+  var lim = overLimit(u, 'check');
+  if (lim) return json({ error: lim });
   var res = UrlFetchApp.fetch('https://proverkacheka.com/api/v1/check/get', {
     method: 'post', muteHttpExceptions: true, payload: { token: token, qrraw: qr }
   });
@@ -295,7 +386,10 @@ function mariaPromos() {
 function sitePrices(e) {
   var req;
   try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ error: 'Плохой запрос' }); }
-  if (!req.idToken || whoIs(req.idToken) !== uid()) return json({ error: 'Нужно войти в дашборд через Google' });
+  var u = caller(req);
+  if (!u) return json({ error: 'Нужно войти в дашборд через Google' });
+  var lim = overLimit(u, 'prices');
+  if (lim) return json({ error: lim });
   var res = { magnit: {}, promos: [] };
   (req.q || []).slice(0, 25).forEach(function (q) {
     try { res.magnit[q] = magnitSearch(q); } catch (err) { res.magnit[q] = []; }

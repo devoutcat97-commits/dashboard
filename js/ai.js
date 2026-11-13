@@ -146,6 +146,7 @@
   // ---------- Запрос к серверу ----------
   function getServer() {
     if (serverUrl) return Promise.resolve(serverUrl);
+    if (window.DASH_SERVER && window.DASH_SERVER.indexOf('@@') < 0) return Promise.resolve(serverUrl = window.DASH_SERVER + '?a=ai');
     return Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
       var info = d.exists ? JSON.parse(d.data().json || '{}') : {};
       if (!info.url) throw new Error('Сервер ещё не настроен');
@@ -164,7 +165,7 @@
       return fetch(r[0], {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ idToken: r[1], system: RULES + '\n\n' + context(), messages: msgs })
+        body: JSON.stringify({ idToken: r[1], root: window.DASH_ROOT || 'users', system: RULES + '\n\n' + context(), messages: msgs })
       });
     }).then(function (res) { return res.json(); }).then(function (d) {
       if (d.error) throw new Error(d.error);

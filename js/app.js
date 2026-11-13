@@ -191,6 +191,17 @@
         dlg._hookUrl = info.url;
         hint.textContent = 'Подключено: покупки из уведомлений Т-Банка записываются сами.' + (n ? ' Ждут разбора: ' + n + '.' : '') + ' Ссылку не показывай другим — по ней можно добавлять записи.';
         dlg.querySelector('[data-hook-btns]').hidden = false;
+      } else if (window.DASH_SERVER && window.DASH_SERVER.indexOf('@@') < 0) {
+        hint.textContent = 'Создаю личную ссылку…';
+        firebase.auth().currentUser.getIdToken().then(function (tok) {
+          return fetch(window.DASH_SERVER + '?a=register', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ idToken: tok, root: window.DASH_ROOT || 'users' }) });
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error || !d.url) throw new Error(d.error || 'нет ответа');
+          dlg._hookUrl = d.url;
+          hint.textContent = 'Ссылка готова. Вставь её в MacroDroid (только Android): покупки из уведомлений банка будут записываться сами. Ссылку не показывай другим.';
+          dlg.querySelector('[data-hook-btns]').hidden = false;
+        }).catch(function (e) { hint.textContent = 'Не получилось создать ссылку: ' + e.message; });
       } else {
         hint.textContent = 'Сервер ещё не настроен. Id для настройки: ' + C._uid();
       }
