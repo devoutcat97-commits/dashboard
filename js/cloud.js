@@ -290,7 +290,7 @@
     var known = Object.keys(synced).length > 0;
     if (!known) {
       if (!Object.keys(remote).length) { push(); return; }
-      if (isEmpty(local)) { takeAll(); return; }
+      if (isEmpty(local) || onlyAutoCreated(Store._raw())) { takeAll(); return; }
     }
     var final = Object.assign({}, local);
     var changedHere = false, merged = 0;
@@ -315,6 +315,16 @@
     if (changedHere) Store._replace(fromParts(final));
     if (!known && merged) U.toast('Данные этого устройства объединены с облаком ☁️');
     push();
+  }
+
+  // На новом устройстве до входа дашборд сам создаёт экзамены из расписания.
+  // Это не данные пользователя: при первом входе их не смешиваем с облаком (иначе будут дубли).
+  function onlyAutoCreated(data) {
+    return Object.keys(data || {}).every(function (k) {
+      var v = data[k];
+      if (!Array.isArray(v) || !v.length) return true;
+      return k === 'study.exams' && v.every(function (e) { return e && e.fromSchedule && !e.result; });
+    });
   }
 
   function takeAll() {
