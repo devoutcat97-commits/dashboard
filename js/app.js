@@ -62,6 +62,7 @@
     });
     if (window.FX) FX.moveIndicator(nav);
 
+    document.documentElement.dataset.tab = tab.id;   // у каждой вкладки свой цвет (см. «Цвет вкладки» в styles.css)
     if (Tabs[tab.id]) Tabs[tab.id].render(view);
     document.title = tab.id === 'summary' ? 'Мой дашборд' : tab.title + ' · Мой дашборд';
 

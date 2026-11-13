@@ -2206,3 +2206,72 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 
 /* Тестовая копия — заметная полоса, чтобы не перепутать с настоящим дашбордом */
 .env-test body::before { content: 'ТЕСТОВАЯ КОПИЯ — данные отдельно от основного дашборда'; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: #d97706; color: #fff; font: 600 11px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }
+
+/* ============================================================
+   Цвет вкладки: у каждого раздела свой оттенок.
+   Шапка раздела — цветная, в том же стиле, что главная карточка «Сводки»;
+   этот же цвет подхватывают иконки разделов, активный переключатель и меню.
+   ============================================================ */
+:root { --tab: var(--accent-deep); --tab-2: #134e4a; --tab-ink: var(--accent); --tab-soft: var(--accent-soft); }
+:root[data-tab="money"] { --tab: #0f766e; --tab-2: #134e4a; --tab-ink: #0f766e; --tab-soft: #dcf1ec; }
+:root[data-tab="shop"]  { --tab: #c2410c; --tab-2: #7c2d12; --tab-ink: #c2410c; --tab-soft: #fde9dc; }
+:root[data-tab="work"]  { --tab: #1d4ed8; --tab-2: #1e3a8a; --tab-ink: #1d4ed8; --tab-soft: #e1e9fc; }
+:root[data-tab="study"] { --tab: #6d28d9; --tab-2: #3b0764; --tab-ink: #6d28d9; --tab-soft: #ece4fb; }
+:root[data-tab="time"]  { --tab: #b45309; --tab-2: #78350f; --tab-ink: #b45309; --tab-soft: #fbecd6; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-tab="money"] { --tab-ink: #5eead4; --tab-soft: #173a35; }
+  :root:not([data-theme="light"])[data-tab="shop"]  { --tab-ink: #fdba74; --tab-soft: #3d2618; }
+  :root:not([data-theme="light"])[data-tab="work"]  { --tab-ink: #93c5fd; --tab-soft: #1c2a47; }
+  :root:not([data-theme="light"])[data-tab="study"] { --tab-ink: #c4b5fd; --tab-soft: #2b2045; }
+  :root:not([data-theme="light"])[data-tab="time"]  { --tab-ink: #fcd34d; --tab-soft: #3a2c14; }
+}
+:root[data-theme="dark"][data-tab="money"] { --tab-ink: #5eead4; --tab-soft: #173a35; }
+:root[data-theme="dark"][data-tab="shop"]  { --tab-ink: #fdba74; --tab-soft: #3d2618; }
+:root[data-theme="dark"][data-tab="work"]  { --tab-ink: #93c5fd; --tab-soft: #1c2a47; }
+:root[data-theme="dark"][data-tab="study"] { --tab-ink: #c4b5fd; --tab-soft: #2b2045; }
+:root[data-theme="dark"][data-tab="time"]  { --tab-ink: #fcd34d; --tab-soft: #3a2c14; }
+
+/* Цветная шапка раздела */
+.view .page-head {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 22px 22px 20px;
+  border-radius: 22px;
+  color: #fff;
+  background: linear-gradient(125deg, var(--tab), var(--tab-2));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--tab) 28%, transparent);
+}
+.view .page-head::before, .view .page-head::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .09);
+  pointer-events: none;
+}
+.view .page-head::before { width: 200px; height: 200px; right: -50px; top: -100px; }
+.view .page-head::after { width: 120px; height: 120px; right: 110px; bottom: -78px; }
+.view .page-head h1 { color: #fff; font-weight: 700; letter-spacing: -.02em; }
+.view .page-head .lead { color: rgba(255, 255, 255, .86); }
+.view .page-head .btn-primary:not(.fab), .view .page-head .btn-primary { background: #fff; color: var(--tab-2); border-color: transparent; }
+@media (max-width: 859.98px) {
+  .view .page-head { padding: 18px 16px 16px; border-radius: 20px; }
+  .view .page-head .fab { background: var(--tab); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--tab) 40%, transparent); }
+}
+
+/* Цвет раздела в деталях */
+.card-head h2 .ico, .section-title .ico { color: var(--tab-ink); }
+.segmented button[aria-selected="true"] { color: var(--tab-ink); font-weight: 600; }
+.nav a[aria-current="page"] .ico { color: var(--tab-ink); }
+@media (max-width: 859.98px) {
+  .nav a[aria-current="page"] { color: var(--tab-ink); }
+}
+.hero-value { color: var(--tab-ink); }
+::selection { background: color-mix(in srgb, var(--tab-ink) 28%, transparent); }
+@media (max-width: 859.98px) {
+  .nav-ind { background: var(--tab-soft); transition: transform .35s cubic-bezier(.2, .8, .2, 1), width .35s, height .35s, background-color .3s; }
+}
+/* Главные кнопки внутри раздела — в цвет раздела */
+:root[data-tab]:not([data-tab="summary"]) .view .btn-primary:not(.page-head .btn-primary) { background: var(--tab); border-color: var(--tab); color: #fff; }
+:root[data-tab]:not([data-tab="summary"]) .view .btn-primary:not(.page-head .btn-primary):hover { background: var(--tab-2); border-color: var(--tab-2); }
