@@ -184,7 +184,7 @@
   function fillAutoField(dlg) {
     var C = window.Cloud, hint = dlg.querySelector('[data-hint="hook"]');
     if (!hint) return;
-    C._db().collection('users').doc(C._uid()).collection('meta').doc('hook').get().then(function (d) {
+    C._db().collection(window.DASH_ROOT || 'users').doc(C._uid()).collection('meta').doc('hook').get().then(function (d) {
       var info = d.exists ? JSON.parse(d.data().json || '{}') : null;
       var n = Tabs.money && Tabs.money.reviewCount ? Tabs.money.reviewCount() : 0;
       if (info && info.url) {

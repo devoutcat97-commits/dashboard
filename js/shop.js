@@ -147,7 +147,7 @@
   function server() {
     if (serverBase) return Promise.resolve(serverBase);
     if (!window.Cloud || !Cloud._uid || !Cloud._uid()) return Promise.reject(new Error('Сначала войди в облако через Google'));
-    return Cloud._db().collection('users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
+    return Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
       var info = d.exists ? JSON.parse(d.data().json || '{}') : {};
       if (!info.url) throw new Error('Сервер ещё не настроен');
       serverBase = info.url.split('?')[0];

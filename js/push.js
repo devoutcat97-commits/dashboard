@@ -16,7 +16,7 @@
   var U = window.UI;
   var CFG = window.CLOUD_CONFIG || {};
   var SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
-  var TOKEN_KEY = 'dash:push-token';
+  var TOKEN_KEY = window.DASH_KEY ? DASH_KEY('dash:push-token') : 'dash:push-token';
   var HORIZON_H = 72;
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -137,7 +137,7 @@
     var json = JSON.stringify({ items: buildPlan(), tz: -new Date().getTimezoneOffset() });
     if (json === lastPlan) return;
     lastPlan = json;
-    Cloud._db().collection('users').doc(Cloud._uid()).collection('meta').doc('plan')
+    Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('plan')
       .set({ json: json, at: firebase.firestore.FieldValue.serverTimestamp() })
       .catch(function () { lastPlan = ''; });
   }
@@ -154,7 +154,7 @@
       document.head.appendChild(s);
     });
   }
-  function tokensRef() { return Cloud._db().collection('users').doc(Cloud._uid()).collection('meta').doc('push'); }
+  function tokensRef() { return Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('push'); }
   function updateTokens(fn) {
     var db = Cloud._db(), ref = tokensRef();
     return db.runTransaction(function (tx) {
@@ -201,7 +201,7 @@
   function test() {
     if (!window.Cloud || !Cloud._uid()) return;
     var soon = new Date(Date.now() + 60e3).toISOString();
-    Cloud._db().collection('users').doc(Cloud._uid()).collection('meta').doc('test')
+    Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('test')
       .set({ json: JSON.stringify({ id: 'test|' + Date.now(), at: soon, title: '🔔 Проверка уведомлений', body: 'Если ты это видишь — push работают!', url: '#summary' }) });
   }
 

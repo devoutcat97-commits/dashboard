@@ -12,7 +12,7 @@
   var U = window.UI;
   var MD = window.MoneyData;
   var esc = U.esc;
-  var HIST_KEY = 'dash:ai-chat';
+  var HIST_KEY = window.DASH_KEY ? DASH_KEY('dash:ai-chat') : 'dash:ai-chat';
   var history = [];      // { role: 'user' | 'model', text, actions?, done? }
   try { history = JSON.parse(localStorage.getItem(HIST_KEY) || '[]').slice(-30); } catch (e) {}
   var panel = null, busy = false, serverUrl = '';
@@ -146,7 +146,7 @@
   // ---------- Запрос к серверу ----------
   function getServer() {
     if (serverUrl) return Promise.resolve(serverUrl);
-    return Cloud._db().collection('users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
+    return Cloud._db().collection(window.DASH_ROOT || 'users').doc(Cloud._uid()).collection('meta').doc('hook').get().then(function (d) {
       var info = d.exists ? JSON.parse(d.data().json || '{}') : {};
       if (!info.url) throw new Error('Сервер ещё не настроен');
       serverUrl = info.url.split('?')[0] + '?a=ai';

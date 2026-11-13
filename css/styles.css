@@ -2200,3 +2200,6 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 @media (min-width: 860px) {
   .shop-actions .btn { flex: 0 0 auto; }
 }
+
+/* Тестовая копия — заметная полоса, чтобы не перепутать с настоящим дашбордом */
+.env-test body::before { content: 'ТЕСТОВАЯ КОПИЯ — данные отдельно от основного дашборда'; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: #d97706; color: #fff; font: 600 11px/18px system-ui, sans-serif; text-align: center; pointer-events: none; }

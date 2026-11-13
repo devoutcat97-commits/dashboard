@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  var KEY = 'dash:data:v1';
+  var KEY = window.DASH_KEY ? DASH_KEY('dash:data:v1') : 'dash:data:v1';
   var listeners = new Set();
   var saveHooks = new Set();   // кто хочет знать о сохранениях на этом устройстве (облако)
   var data = load();

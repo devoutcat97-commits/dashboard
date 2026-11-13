@@ -71,14 +71,14 @@
   function isEmpty(parts) {
     return !Object.keys(parts).some(function (k) { return k.indexOf('c~') === 0; });
   }
-  function syncedKey() { return 'dash:cloud:synced:' + (user ? user.uid : ''); }
+  function syncedKey() { return (window.DASH_ENV === 'test' ? 'dash:cloud:synced:test:' : 'dash:cloud:synced:') + (user ? user.uid : ''); }
   function loadSynced() {
     try { return JSON.parse(localStorage.getItem(syncedKey()) || '{}') || {}; } catch (e) { return {}; }
   }
   function saveSynced() {
     try { localStorage.setItem(syncedKey(), JSON.stringify(synced)); } catch (e) {}
   }
-  function partsRef() { return db.collection('users').doc(user.uid).collection('parts'); }
+  function partsRef() { return db.collection(window.DASH_ROOT || 'users').doc(user.uid).collection('parts'); }
 
   function setState(s, err) {
     state = s;
@@ -176,7 +176,7 @@
   var unsubInbox = null, inboxBusy = false, inboxAgain = false;
   function watchInbox() {
     if (unsubInbox) unsubInbox();
-    var ref = db.collection('users').doc(user.uid).collection('inbox');
+    var ref = db.collection(window.DASH_ROOT || 'users').doc(user.uid).collection('inbox');
     unsubInbox = ref.onSnapshot(function (snap) {
       if (!snap.empty) drainInbox(snap.docs.map(function (d) { return d.ref; }));
     }, function () {});
@@ -200,7 +200,7 @@
       inboxBusy = false;
       if (inboxAgain) {
         inboxAgain = false;
-        db.collection('users').doc(user.uid).collection('inbox').get().then(function (q) {
+        db.collection(window.DASH_ROOT || 'users').doc(user.uid).collection('inbox').get().then(function (q) {
           if (!q.empty) drainInbox(q.docs.map(function (d) { return d.ref; }));
         });
       }

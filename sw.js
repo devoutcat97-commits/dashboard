@@ -6,7 +6,9 @@
    Так обновления приходят сразу, а без связи дашборд всё равно открывается.
    Данные (записи) и так хранятся в браузере, им интернет не нужен.
    ============================================================ */
-var CACHE = 'dashboard-v2';
+// Основной сайт и тестовая копия живут на одном домене — у каждого свой кэш, чужой не трогаем.
+var ENV = /\/dashboard-test\//.test(self.location.pathname) ? 'test' : 'prod';
+var CACHE = 'dashboard-v2-' + ENV;
 
 self.addEventListener('install', function (event) {
   self.skipWaiting();
@@ -16,7 +18,7 @@ self.addEventListener('install', function (event) {
 self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys()
-      .then(function (keys) { return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); })
+      .then(function (keys) { return Promise.all(keys.filter(function (k) { return k !== CACHE && (k.indexOf('-' + ENV) !== -1 || (ENV === 'prod' && !/-(prod|test)$/.test(k))); }).map(function (k) { return caches.delete(k); })); })
       .then(function () { return self.clients.claim(); })
   );
 });
