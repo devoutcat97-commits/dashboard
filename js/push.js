@@ -213,10 +213,30 @@
     return 'Выключены на этом устройстве.';
   }
 
+  // Самовосстановление подписки. Если браузер сменил «адрес» устройства или сервер вычеркнул его
+  // (ответ «устройство не найдено»), на телефоне всё ещё написано «включены», а уведомления не приходят.
+  // Поэтому при каждом открытии дашборда сверяем адрес этого устройства с облаком и возвращаем его, если пропал.
+  var healed = false;
+  function heal() {
+    if (healed || !enabled() || !CFG.vapidKey || !window.Cloud || !Cloud._uid()) return;
+    healed = true;
+    Promise.all([loadMessaging(), navigator.serviceWorker.ready]).then(function (r) {
+      return firebase.messaging().getToken({ vapidKey: CFG.vapidKey, serviceWorkerRegistration: r[1] });
+    }).then(function (t) {
+      if (!t) return;
+      var old = token();
+      try { localStorage.setItem(TOKEN_KEY, t); } catch (e) {}
+      return updateTokens(function (tokens) {
+        if (old && old !== t) delete tokens[old];
+        if (!tokens[t]) tokens[t] = { device: deviceName(), at: new Date().toISOString(), restored: true };
+      });
+    }).catch(function (e) { healed = false; console.warn('Push: не удалось проверить подписку', e); });
+  }
+
   // План обновляем при любом изменении данных и раз в 30 минут (чтобы горизонт сдвигался).
   Store.subscribe(schedulePlan);
   setInterval(schedulePlan, 30 * 60e3);
-  if (window.Cloud) Cloud.onChange(function () { if (Cloud.state() === 'synced') schedulePlan(); });
+  if (window.Cloud) Cloud.onChange(function () { if (Cloud.state() === 'synced') { schedulePlan(); heal(); } });
 
   window.Push = { enable: enable, disable: disable, enabled: enabled, supported: supported, statusText: statusText, test: test, buildPlan: buildPlan };
 })();
