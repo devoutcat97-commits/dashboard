@@ -398,3 +398,24 @@ function sitePrices(e) {
   if (req.promos) { try { res.promos = mariaPromos(); } catch (err) {} }
   return json(res);
 }
+
+// ---------- Проверка уведомлений (запускать из редактора) ----------
+// Показывает, какие устройства подписаны, и шлёт им тестовое уведомление.
+// В журнале — ответ сервиса уведомлений Google по каждому устройству.
+function pushDiag() {
+  allUsers().forEach(function (u) {
+    var push = getJsonU(u, 'meta/push');
+    var tokens = push && push.tokens ? Object.keys(push.tokens) : [];
+    console.log(u.root + '/' + u.uid.slice(0, 6) + '…: устройств ' + tokens.length);
+    tokens.forEach(function (t) {
+      var res = UrlFetchApp.fetch(FCM, {
+        method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        payload: JSON.stringify({ message: { token: t,
+          data: { title: '🔔 Проверка с сервера', body: 'Если видишь — уведомления работают', url: '#summary', tag: 'diag' },
+          webpush: { headers: { Urgency: 'high', TTL: '600' } } } })
+      });
+      console.log('  ' + (push.tokens[t].device || '?') + ' (' + push.tokens[t].at + '): ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 200));
+    });
+  });
+}
