@@ -243,7 +243,8 @@ a { color: inherit; text-decoration: none; }
     padding: 24px 16px 20px;
     border-right: 1px solid var(--border);
   }
-  .masthead { padding: 0 4px 0 8px; }
+  /* Логотип и кнопки вместе шире панели — кнопки уходят на свою строку под логотипом. */
+  .masthead { padding: 0 4px 0 8px; flex-wrap: wrap; row-gap: 14px; }
 
   .nav { display: flex; flex-direction: column; gap: 2px; }
   .nav a { gap: 12px; padding: 9px 12px; font-size: 14.5px; }
@@ -969,6 +970,10 @@ textarea {
   font-size: 15px;
   resize: vertical;
 }
+/* На iPhone поле с текстом мельче 16px при нажатии приближает всю страницу. */
+@media (max-width: 859.98px) {
+  input[type="text"], input[type="search"], input[type="date"], input[type="number"], input:not([type]), select, textarea { font-size: 16px; }
+}
 textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 
 /* ============================================================
@@ -1154,6 +1159,8 @@ dialog.sheet {
   box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
 }
 dialog.sheet::backdrop { background: var(--overlay); }
+/* Прокрутка внутри окна не уходит на страницу под ним. */
+dialog.sheet, .sheet-body, .cmd-list, .imp-list, .ai-list { overscroll-behavior: contain; }
 .sheet-form { display: flex; flex-direction: column; max-height: inherit; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 4px 20px; }
 .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
@@ -1239,6 +1246,8 @@ dialog.sheet::backdrop { background: var(--overlay); }
   left: 50%;
   bottom: 24px;
   z-index: 200;
+  width: max-content;
+  max-width: min(440px, calc(100vw - 32px));   /* иначе на телефоне подсказка сжимается до половины экрана */
   padding: 10px 16px;
   border-radius: 12px;
   background: var(--text);
@@ -2130,6 +2139,10 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+/* На миг при смене темы: все цвета меняются сразу, без «размазывания». */
+.no-trans *, .no-trans *::before, .no-trans *::after { transition: none !important; }
+/* Карточки «Денег», идущие подряд, — с обычным промежутком. */
+.money-body > .card + .card { margin-top: 12px; }
 
 /* ---------- Разобрать (операции из уведомлений) ---------- */
 .review-card { border-left: 3px solid var(--warning); }

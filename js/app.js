@@ -111,7 +111,18 @@
     return t === 'light' || t === 'dark' ? t : 'auto';
   }
 
+  // Пока меняются цвета темы, выключаем плавные переходы — иначе экран на миг «размазывается».
+  function instantly(fn) {
+    root.classList.add('no-trans');
+    fn();
+    void root.offsetHeight;
+    requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.remove('no-trans'); }); });
+  }
+
   function applyTheme(t) {
+    instantly(function () { setTheme(t); });
+  }
+  function setTheme(t) {
     if (t === 'auto') delete root.dataset.theme;
     else root.dataset.theme = t;
     try { localStorage.setItem('dash:theme', t); } catch (e) {}
@@ -130,7 +141,7 @@
   themeBtn.addEventListener('click', function () {
     applyTheme(THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length]);
   });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncThemeUI);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { instantly(syncThemeUI); });
 
   // ---------- Цвет акцента ----------
   var ACCENTS = [
