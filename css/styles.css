@@ -1160,7 +1160,7 @@ dialog.sheet {
 }
 dialog.sheet::backdrop { background: var(--overlay); }
 /* Прокрутка внутри окна не уходит на страницу под ним. */
-dialog.sheet, .sheet-body, .cmd-list, .imp-list, .ai-list { overscroll-behavior: contain; }
+dialog.sheet, .cmd-list, .imp-list, .ai-list { overscroll-behavior: contain; }   /* не на .sheet-body: ей нечего листать, иначе палец на списке не листает окно */
 .sheet-form { display: flex; flex-direction: column; max-height: inherit; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 4px 20px; }
 .sheet-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
