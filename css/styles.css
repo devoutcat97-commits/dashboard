@@ -2361,3 +2361,11 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 }
 /* Покупки: плитки с цифрами и карточка ниже не слипаются */
 .shop .grid { margin-bottom: 12px; }
+
+/* Перенос дела на любой день: кнопка-календарь, поверх неё — невидимое поле даты (календарь телефона). */
+.move-date { position: relative; flex: none; width: 32px; padding: 0; display: inline-grid; place-items: center; overflow: hidden; }
+.move-date .ico { width: 16px; height: 16px; }
+.move-date input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.ag-item .move-date { align-self: center; margin-left: 6px; }
+.dl-more { margin-top: 10px; }
+.ag-item:has(.move-date) .ag-meta { white-space: normal; }   /* рядом кнопка-календарь — дату не обрезаем */

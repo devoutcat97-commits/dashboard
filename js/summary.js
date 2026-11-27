@@ -20,6 +20,7 @@
     work: ico('<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>'),
     arrow: ico('<path d="m9 6 6 6-6 6"/>'),
     alert: ico('<path d="M12 8v5M12 16.5v.01"/><circle cx="12" cy="12" r="9"/>'),
+    cal: ico('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
     piggy: ico('<path d="M5 11a7 6 0 0 1 12-3h2v3l-1.5 1.5V16H15v2h-2.5v-2h-3v2H7v-2.5A6 6 0 0 1 5 11Z"/><path d="M14.5 10.5v.01"/>')
   };
 
@@ -90,9 +91,16 @@
     if (it.check) {
       return '<li class="ag-item"><label class="ag-check"><input type="checkbox" data-role="ag-done" data-kind="' + it.kind + '" data-id="' + esc(it.id) + '"' +
         (it.parent ? ' data-parent="' + esc(it.parent) + '"' : '') + ' aria-label="Готово: ' + esc(it.title) + '"></label>' +
-        '<a class="ag-link" href="#' + it.tab + '">' + body + '</a></li>';
+        '<a class="ag-link" href="#' + it.tab + '">' + body + '</a>' + (late ? moveDateHtml(it) : '') + '</li>';
     }
     return '<li class="ag-item"><span class="ag-dot ag-dot--' + it.kind + '"></span><a class="ag-link" href="#' + it.tab + '">' + body + I.arrow + '</a></li>';
+  }
+
+  // Кнопка-календарь: перенести дело на любой день (открывает календарь телефона).
+  function moveDateHtml(it) {
+    return '<label class="btn btn-small move-date" data-tip="Перенести на другой день">' + I.cal +
+      '<input type="date" min="' + addDays(U.today(), 1) + '" aria-label="Перенести на другой день: ' + esc(it.title) + '" data-move-date="' + esc(it.kind) + '" data-id="' + esc(it.id) + '"' +
+      (it.parent ? ' data-parent="' + esc(it.parent) + '"' : '') + '></label>';
   }
 
   function todayLeft() {
@@ -100,7 +108,29 @@
     return agenda().filter(function (it) { return it.check && it.date <= today; }).length;
   }
 
+  // Отметить дело сделанным; в подсказке внизу — «Отменить» на случай случайной галочки.
   function markDone(kind, id, parent) {
+    var taskIds = Store.list('work.tasks').map(function (t) { return t.id; });
+    doneOnly(kind, id, parent);
+    var added = Store.list('work.tasks').map(function (t) { return t.id; }).filter(function (x) { return taskIds.indexOf(x) === -1; });
+    var shown = document.querySelector('.toast.is-on span');
+    U.toast(shown ? shown.textContent : 'Готово!', { action: 'Отменить', onAction: function () { undoDone(kind, id, parent, added); } });
+  }
+  function undoDone(kind, id, parent, added) {
+    added.forEach(function (x) { Store.remove('work.tasks', x); });   // следующий повтор задачи
+    if (kind === 'task') Store.update('work.tasks', id, { done: false, doneAt: '' });
+    else if (kind === 'hw') Store.update('study.homework', id, { done: false, doneAt: '' });
+    else if (kind === 'todo') {
+      var e = Store.list('study.events').find(function (x) { return x.id === parent; });
+      if (e) Store.update('study.events', parent, { todo: (e.todo || []).map(function (t) { return t.id === id ? Object.assign({}, t, { done: false }) : t; }) });
+    } else if (kind === 'stage' && Tabs.study) {
+      var th = JSON.parse(JSON.stringify(Store.getSetting('study.thesis', null) || {}));
+      (th.stages || []).forEach(function (s) { if (s.id === id) s.done = false; });
+      Tabs.study.saveThesis(th);
+    }
+    U.toast('Вернулось в список');
+  }
+  function doneOnly(kind, id, parent) {
     var before = todayLeft();
     var now = new Date().toISOString();
     if (kind === 'task' && Tabs.work && Tabs.work.completeTask) {
@@ -432,6 +462,7 @@
     );
   }
 
+  var showAllDeadlines = false;
   function deadlinesHtml(items) {
     var today = U.today(), until = addDays(today, 7);
     var late = items.filter(function (it) { return it.date < today && (it.check || it.kind === 'pay'); });
@@ -443,7 +474,13 @@
     }
     var byDay = {};
     soon.forEach(function (it) { (byDay[it.date] = byDay[it.date] || []).push(it); });
-    Object.keys(byDay).sort().forEach(function (d) {
+    var days = Object.keys(byDay).sort();
+    var hiddenCount = 0;
+    if (!showAllDeadlines && days.length > 3) {
+      days.slice(3).forEach(function (d) { hiddenCount += byDay[d].length; });
+      days = days.slice(0, 3);
+    }
+    days.forEach(function (d) {
       body += '<div class="ag-day"><div class="ag-day-title">' + esc(dayName(d)) + '</div><ul class="ag-list">' +
         byDay[d].map(function (it) { return itemHtml(it, false); }).join('') + '</ul></div>';
     });
@@ -451,6 +488,8 @@
       '<section class="card">' +
         '<div class="card-head"><h2>' + ico('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>') + 'Сроки на 7 дней</h2><span class="muted">' + soon.length + ' ' + U.plural(soon.length, 'дело', 'дела', 'дел') + '</span></div>' +
         (body || '<p class="muted today-note">Ближайшую неделю сроков нет. Сюда попадают задачи, задания, этапы ВКР, мероприятия, экзамены и регулярные платежи.</p>') +
+        (hiddenCount ? '<button type="button" class="btn btn-small btn-ghost dl-more" data-dl-all="1">Показать все сроки недели (ещё ' + hiddenCount + ')</button>'
+          : showAllDeadlines && Object.keys(byDay).length > 3 ? '<button type="button" class="btn btn-small btn-ghost dl-more" data-dl-all="0">Показать только ближайшие</button>' : '') +
       '</section>'
     );
   }
@@ -648,7 +687,7 @@
     var leftHtml = left.length
       ? '<h3 class="block-sub">Не успел — перенести?</h3><ul class="ag-list">' + left.map(function (it) {
           return '<li class="ag-item"><span class="ag-main"><span class="ag-title">' + esc(it.title) + '</span><span class="ag-meta">' + esc(it.source) + '</span></span>' +
-            '<button type="button" class="btn btn-small" data-move="' + esc(it.kind) + '" data-id="' + esc(it.id) + '"' + (it.parent ? ' data-parent="' + esc(it.parent) + '"' : '') + '>на завтра</button></li>';
+            '<button type="button" class="btn btn-small" data-move="' + esc(it.kind) + '" data-id="' + esc(it.id) + '"' + (it.parent ? ' data-parent="' + esc(it.parent) + '"' : '') + '>на завтра</button>' + moveDateHtml(it) + '</li>';
         }).join('') + '</ul>' + (left.length > 1 ? '<button type="button" class="btn btn-small btn-ghost" data-move-all="1">Перенести всё на завтра</button>' : '')
       : '';
     return (
@@ -668,8 +707,8 @@
     );
   }
 
-  function moveToTomorrow(kind, id, parent) {
-    var tomorrow = addDays(U.today(), 1);
+  function moveToTomorrow(kind, id, parent) { moveTo(kind, id, parent, addDays(U.today(), 1)); }
+  function moveTo(kind, id, parent, tomorrow) {
     if (kind === 'task') Store.update('work.tasks', id, { due: tomorrow });
     else if (kind === 'hw') Store.update('study.homework', id, { due: tomorrow });
     else if (kind === 'todo') {
@@ -779,6 +818,11 @@
         setTimeout(function () { Store.update('shopping', t.dataset.shopDone, { done: true }); }, 240);
         return;
       }
+      if (t.dataset.moveDate && t.value) {
+        moveTo(t.dataset.moveDate, t.dataset.id, t.dataset.parent, t.value);
+        U.toast('Перенесено: ' + dayName(t.value).replace('Завтра · ', 'завтра, ').toLowerCase());
+        return;
+      }
       if (t.dataset.role === 'ag-done' && t.checked) {
         var li = t.closest('.ag-item');
         if (li) li.classList.add('is-leaving');
@@ -786,9 +830,13 @@
       }
     });
     wrap.addEventListener('click', function (ev) {
+      // На компьютере клик по полю даты сам календарь не открывает — открываем явно.
+      if (ev.target.matches('[data-move-date]') && ev.target.showPicker) { try { ev.target.showPicker(); } catch (e5) {} return; }
       var a = ev.target.closest('a[href="#summary-today"]');
       if (a) { ev.preventDefault(); var tc = wrap.querySelector('.today-card'); if (tc) tc.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       if (ev.target.closest('[data-cd-all]')) { allDatesDialog(); return; }
+      var dl = ev.target.closest('[data-dl-all]');
+      if (dl) { showAllDeadlines = dl.dataset.dlAll === '1'; App.softRefresh(); return; }
       var b = ev.target.closest('[data-cd], [data-cd-new]');
       if (b) { countdownDialog(b.dataset.cd ? Store.list('countdowns').find(function (c) { return c.id === b.dataset.cd; }) : null); return; }
       var qa = ev.target.closest('[data-qa]');
