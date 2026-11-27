@@ -1290,7 +1290,7 @@
     var key = currentMonth(), day = new Date().getDate(), n = U.daysIn(key);
     var prevKeys = [1, 2, 3].map(function (i) { return U.addMonths(key, -i); }).filter(fullMonth);
     if (prevKeys.length && day >= 7) {
-      var cur = byGroupMonth(key), avg = {};
+      var cur, avg = {};
       prevKeys.forEach(function (k) { var g = byGroupMonth(k); Object.keys(g).forEach(function (id) { avg[id] = (avg[id] || 0) + g[id] / prevKeys.length; }); });
       // Сравниваем не прогноз, а «сколько обычно потрачено к этому же числу месяца»:
       // коммуналка или аренда платятся раз в начале месяца, и растягивать их на 30 дней нельзя.
@@ -1303,11 +1303,15 @@
       // Регулярные платежи (аренда, подписки) — ожидаемые траты, их не подсвечиваем.
       cur = {};
       inMonth(allTx(), key).forEach(function (t) { if (t.type === 'expense' && !t.recurringId) cur[t.category] = (cur[t.category] || 0) + t.amount; });
+      // Хвалим, только если операции за месяц свежие: при старой выписке «трат нет» — это просто нет данных.
+      var lastDay = inMonth(allTx(), key).reduce(function (m, t) { return Math.max(m, +t.date.slice(8, 10)); }, 0);
+      var less = [];
       Object.keys(avg).forEach(function (id) {
         var a = avg[id], c = cur[id] || 0, t = toDay[id] || 0;
         if (a >= 1000 && c > t * 1.4 && c - t >= 1500) out.push({ emoji: '📈', level: 'warn', text: groupName(id) + ': уже ' + U.money(Math.round(c)) + ' — обычно к ' + day + '-му числу ≈ ' + U.money(Math.round(t / 10) * 10) + ', а за весь месяц ≈ ' + U.money(Math.round(a / 10) * 10) });
-        else if (a >= 1500 && day >= 15 && c < t * 0.6) out.push({ emoji: '📉', level: 'good', text: groupName(id) + ': тратишь заметно меньше обычного — так держать!' });
+        else if (a >= 1500 && day >= 15 && day - lastDay <= 3 && c < t * 0.6) less.push(groupName(id));
       });
+      if (less.length) out.push({ emoji: '📉', level: 'good', text: 'Меньше обычного: ' + less.join(', ') + ' — так держать!' });
     }
     // Необычно крупная трата за 14 дней: втрое больше обычной траты в этой категории.
     var since90 = U.iso(new Date(Date.now() - 90 * 864e5)), since14 = U.iso(new Date(Date.now() - 14 * 864e5));

@@ -500,6 +500,9 @@ a.stat:hover { border-color: var(--text-3); }
   cursor: pointer;
 }
 .link-btn:hover { text-decoration: underline; }
+/* Невидимая зона нажатия побольше: по маленькой ссылке легко попасть пальцем, вид не меняется. */
+.link-btn, .toast-action { position: relative; }
+.link-btn::after, .toast-action::after { content: ""; position: absolute; inset: -10px -6px; }
 
 input[type="text"], input[type="search"], input[type="date"], input[type="number"], input:not([type]), select {
   width: 100%;
@@ -1738,7 +1741,7 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .dayend-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .dayend-stats > div { display: flex; flex-direction: column; min-width: 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
 .dayend-stats b { font-size: 19px; }
-.dayend-stats small { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dayend-stats small { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dayend .ag-item { gap: 10px; }
 .quick-time { margin-top: 4px; }
 .chip-btn {

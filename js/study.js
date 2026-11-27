@@ -83,8 +83,23 @@
     if (/зач/.test(t)) return 'credit';
     return '';
   }
+  function autoNote(n) { return !n || /^По расписанию/.test(n); }
+  // Раньше при первом входе зачёты из расписания могли записаться несколько раз.
+  // Лишние автокопии убираем; запись с оценкой, билетами или своей заметкой не трогаем.
+  function dedupeSession() {
+    function auto(e) { return e.fromSchedule && !e.result && !(e.tickets && e.tickets.length) && autoNote(e.note); }
+    var keep = {}, drop = [];
+    Store.list('study.exams').forEach(function (e) {
+      var k = e.subject + '|' + e.kind + '|' + e.date;
+      if (!keep[k]) { keep[k] = e; return; }
+      if (auto(e)) drop.push(e.id);
+      else if (auto(keep[k])) { drop.push(keep[k].id); keep[k] = e; }
+    });
+    if (drop.length) Store.removeMany('study.exams', drop);
+  }
   function syncSession() {
     if (!schedule) return;
+    dedupeSession();
     var today = U.today();
     var exams = Store.list('study.exams');
     var seen = {};   // экзамены, уже обновлённые в этот проход (вторая строка того же дня — не трогаем)
@@ -99,9 +114,10 @@
         exams.push(rec);
       } else if (same.fromSchedule && same.date === l.date && same.note !== note && seen[same.id]) {
         // вторая строка того же экзамена в тот же день — оставляем время начала
-      } else if (same.fromSchedule && (same.date !== l.date || same.note !== note)) {
+      } else if (same.fromSchedule && (same.date !== l.date || (same.note !== note && autoNote(same.note)))) {
         seen[same.id] = true;
-        Store.update('study.exams', same.id, { date: l.date, note: note });
+        // Свою заметку не затираем — обновляем только текст «По расписанию: …».
+        Store.update('study.exams', same.id, { date: l.date, note: autoNote(same.note) ? note : same.note });
       } else if (!same.date) {
         Store.update('study.exams', same.id, { date: l.date });
       }

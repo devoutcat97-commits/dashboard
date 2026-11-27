@@ -98,6 +98,14 @@
       if (i !== -1) { list.splice(i, 1); save(); }
     },
 
+    // Удалить сразу несколько записей — с одним сохранением.
+    removeMany: function (name, ids) {
+      var set = {};
+      ids.forEach(function (id) { set[id] = true; });
+      data[name] = collection(name).filter(function (r) { return !set[r.id]; });
+      save();
+    },
+
     // Настройки (бюджет, категории и т.п.)
     getSetting: function (key, fallback) {
       var s = data.settings || {};
