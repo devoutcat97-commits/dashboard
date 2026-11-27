@@ -419,7 +419,7 @@
       quick +
       (open.length ? '<ul class="task-list card">' + open.map(item).join('') + '</ul>'
         : U.empty(done.length
-            ? { emoji: '🎉', title: 'Все задания сделаны!', text: 'Свободен до следующей пары.' }
+            ? { emoji: '🎉', title: 'Все задания сделаны', text: 'Свободен до следующей пары.' }
             : { emoji: '📚', title: 'Заданий пока нет', text: 'Начни с предмета: «нотариат доклад по ст. 35» — срок подставится к следующей паре.', action: 'Добавить задание', attr: 'data-focus="[data-role=hw-quick]"' })) +
       (done.length ? '<button type="button" class="done-toggle" data-action="toggle-hw-done" aria-expanded="' + state.showDoneHw + '">' + I.chevron + 'Сделано · ' + done.length + '</button>' +
         (state.showDoneHw ? '<ul class="task-list card is-done">' + done.slice(0, 50).map(item).join('') + '</ul>' : '') : '')
@@ -511,8 +511,8 @@
       ? 'Выучено ' + c.done + ' из ' + c.total + ' · повторить ' + c.repeat + ' · не начато ' + c['new']
       : 'Добавь билеты — вставь список вопросов, по одному на строку.';
     var plan = c.total && c.done < c.total && c.days !== null
-      ? (c.days > 0 ? '🎯 Чтобы успеть, учи ≈ <b>' + c.perDay + '</b> ' + U.plural(c.perDay, 'билет', 'билета', 'билетов') + ' в день' : '⏰ Экзамен сегодня — удачи!')
-      : c.total && c.done === c.total ? '🎉 Все билеты выучены!' : '';
+      ? (c.days > 0 ? 'Чтобы успеть, учи ≈ <b>' + c.perDay + '</b> ' + U.plural(c.perDay, 'билет', 'билета', 'билетов') + ' в день' : 'Экзамен сегодня — удачи!')
+      : c.total && c.done === c.total ? 'Все билеты выучены 🎉' : '';
     function fbtn(k, label, n) {
       return '<button type="button" role="tab" aria-selected="' + (f === k) + '" data-action="prep-filter" data-f="' + k + '">' + label + (n != null ? ' · ' + n : '') + '</button>';
     }
@@ -522,7 +522,7 @@
           (e.date ? '<span class="muted">' + esc(dueText(e.date).text) + '</span>' : '') + '</div>' +
         '<div class="ring-row">' + U.ring(c.total ? c.done / c.total : 0, { size: 84, stroke: 9, cls: c.total && c.done === c.total ? 'is-good' : '' }) +
           '<div class="ring-info"><p class="hero-meta">' + info + '</p>' + (plan ? '<p class="prep-plan">' + plan + '</p>' : '') +
-            (c.total && c.done < c.total ? '<button type="button" class="btn btn-primary btn-small" data-action="prep-random" data-id="' + e.id + '">🎲 Случайный билет</button>' : '') +
+            (c.total && c.done < c.total ? '<button type="button" class="btn btn-primary btn-small" data-action="prep-random" data-id="' + e.id + '">Случайный билет</button>' : '') +
           '</div></div>' +
         '<form class="prep-add" data-form="prep-add" data-id="' + e.id + '">' +
           '<textarea name="lines" rows="3" placeholder="Вставь билеты списком — по одному на строку. Номера в начале строк уберутся сами."></textarea>' +
@@ -549,7 +549,7 @@
     var after = prepStats(Object.assign({}, e, { tickets: tk }));
     if (after.total && after.done === after.total && before.done < before.total && window.FX) {
       FX.confetti();
-      U.toast('Все билеты по «' + e.subject + '» выучены! 🎉');
+      U.toast('Все билеты по «' + e.subject + '» выучены 🎉');
     }
   }
 
@@ -564,7 +564,7 @@
     var dlg = document.createElement('dialog');
     dlg.className = 'sheet ticket-dlg';
     dlg.innerHTML =
-      '<div class="sheet-form"><div class="sheet-head"><h2>🎲 Билет № ' + t.n + '</h2><button type="button" class="icon-x" data-close aria-label="Закрыть">×</button></div>' +
+      '<div class="sheet-form"><div class="sheet-head"><h2>Билет № ' + t.n + '</h2><button type="button" class="icon-x" data-close aria-label="Закрыть">×</button></div>' +
         '<div class="ticket-big">' + esc(t.text) + '</div>' +
         '<p class="field-hint" style="padding:0 20px">Расскажи ответ вслух или про себя — и честно отметь, как получилось.</p>' +
         '<div class="sheet-foot"><button type="button" class="btn" data-r="repeat">↻ Повторить</button><span class="spacer"></span>' +
@@ -624,7 +624,7 @@
               '<span class="task-meta">' + esc(KINDS[e.kind] || '') + ' · ' + e.semester + '-й семестр · <span class="' + d.cls + '">' + esc(d.text) + '</span>' +
                 (tk.length ? ' · выучено ' + tDone + ' из ' + tk.length : '') + '</span></button>' +
               (tk.length ? U.ring(tDone / tk.length, { size: 38, stroke: 5, text: '', cls: tDone === tk.length ? 'is-good' : '' }) : '') +
-              '<button type="button" class="btn btn-small" data-action="prep" data-id="' + e.id + '">📚 Билеты</button></li>';
+              '<button type="button" class="btn btn-small" data-action="prep" data-id="' + e.id + '">Билеты</button></li>';
           }).join('') + '</ul>'
         : '<div class="card empty-note">Добавь зачёты и экзамены ближайшей сессии с датами — они появятся здесь и на Сводке.</div>');
 
@@ -682,7 +682,7 @@
         var wasDone = editing && e.result;
         if (!wasDone && (rec.result === '5' || rec.result === 'pass')) {
           if (window.FX) FX.confetti();
-          U.toast(rec.result === '5' ? 'Отлично! Поздравляю! 🎉' : 'Зачёт! 🎉');
+          U.toast(rec.result === '5' ? 'Отлично, поздравляю 🎉' : 'Зачёт 🎉');
         }
       },
       onDelete: editing ? function () {
@@ -720,7 +720,7 @@
             '<p class="thesis-topic">' + (t.topic ? esc(t.topic) : '<span class="muted">Тема ещё не указана</span>') + '</p>' +
             (t.supervisor ? '<p class="field-hint">Научный руководитель: ' + esc(t.supervisor) + '</p>' : '') +
             '<p class="hero-meta">Готово ' + done + ' из ' + t.stages.length + ' этапов' +
-              (next ? ' · дальше: ' + esc(next.name) + (next.due ? ' (' + esc(dueText(next.due).text) + ')' : '') : ' · всё готово!') + '</p>' +
+              (next ? ' · дальше: ' + esc(next.name) + (next.due ? ' (' + esc(dueText(next.due).text) + ')' : '') : ' · всё готово') + '</p>' +
           '</div></div>' +
       '</section>';
     var stages =
@@ -931,7 +931,7 @@
         saveThesis(th);
         if (t.checked && window.FX) {
           FX.confetti();
-          U.toast(th.stages.every(function (x) { return x.done; }) ? 'ВКР готова! Поздравляю! 🎓' : 'Этап «' + s.name + '» готов! 🎉');
+          U.toast(th.stages.every(function (x) { return x.done; }) ? 'ВКР готова, поздравляю 🎉' : 'Этап «' + s.name + '» готов 🎉');
         }
       }
     } else if (role === 'todo-done') {

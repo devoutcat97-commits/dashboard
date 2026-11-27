@@ -93,7 +93,7 @@
     var d = dlg = document.createElement('dialog');
     dlg.className = 'sheet focus-sheet';
     dlg.innerHTML = '<div class="sheet-form">' +
-      '<div class="sheet-head"><h2>⏳ Фокус</h2><button type="button" class="icon-x" data-f="close" aria-label="Свернуть окно таймера">' +
+      '<div class="sheet-head"><h2>Фокус</h2><button type="button" class="icon-x" data-f="close" aria-label="Свернуть окно таймера">' +
       '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>' +   // стрелка вниз: свернуть, таймер идёт дальше
       '<div class="focus-body">' + html + '</div></div>';
     d.addEventListener('click', function (e) {
@@ -205,8 +205,8 @@
       pill.addEventListener('click', openRunning);
       document.body.appendChild(pill);
     }
-    var txt = (s.mode === 'work' ? '⏳ ' + catName(s.cat) : '☕ Перерыв') + ' · ' + mmss(leftMs(s)) + (s.endsAt ? '' : ' · пауза');
-    pill.textContent = txt;
+    var txt = (s.mode === 'work' ? catName(s.cat) : 'Перерыв') + ' · ' + mmss(leftMs(s)) + (s.endsAt ? '' : ' · пауза');
+    pill.innerHTML = U.icon(s.mode === 'work' ? 'hourglass' : 'clock') + '<span>' + esc(txt) + '</span>';
     pill.setAttribute('aria-label', 'Таймер фокуса: ' + txt + '. Открыть');
   }
 

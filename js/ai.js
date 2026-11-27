@@ -210,23 +210,23 @@
   function describe(a) {
     var t;
     switch (a.do) {
-      case 'add_tx': return (a.type === 'income' ? '➕ Доход ' : a.type === 'transfer' ? '🔁 Перевод ' : '➖ Расход ') + U.money(Math.abs(+a.amount || 0)) + (a.note ? ' · ' + a.note : '') + (a.category && window.Tabs.money ? ' · ' + Tabs.money.catFull(a.category, a.sub) : '') + ' · ' + validDate(a.date);
-      case 'update_tx': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return '✏️ Изменить: ' + (t ? (t.note || '') + ' ' + U.money(t.amount) + ' (' + t.date + ')' : a.id) + ' → ' + Object.keys(a).filter(function (k) { return k !== 'do' && k !== 'id'; }).map(function (k) { return k + ': ' + a[k]; }).join(', ');
-      case 'delete_tx': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return '🗑️ Удалить: ' + (t ? (t.note || '') + ' ' + U.money(t.amount) + ' (' + t.date + ')' : a.id);
-      case 'categorize': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return '🏷️ ' + (t ? (t.note || '') + ' ' + U.money(t.amount) : a.id) + ' → ' + (window.Tabs.money ? Tabs.money.catFull(a.category, a.sub) : a.category);
-      case 'add_task': return '✅ Задача: ' + a.title + (a.due ? ' · до ' + a.due : '');
-      case 'add_homework': return '📚 Задание: ' + (a.subject ? a.subject + ' — ' : '') + a.title + (a.due ? ' · до ' + a.due : '');
-      case 'update_item': return '✏️ Изменить ' + (a.kind === 'task' ? 'задачу' : 'задание') + (a.title ? ': ' + a.title : '') + (a.due ? ' · срок ' + a.due : '') + (a.done ? ' · выполнено' : '');
-      case 'delete_item': return '🗑️ Удалить ' + ({ task: 'задачу', homework: 'задание', countdown: 'особую дату', shopping: 'покупку' }[a.kind] || '') + ' ' + a.id;
-      case 'add_time': return '⏱️ Время: ' + (+a.minutes || 0) + ' мин' + (a.note ? ' · ' + a.note : '') + ' · ' + validDate(a.date);
-      case 'add_shopping': return '🛒 В список: ' + (a.items || []).join(', ');
+      case 'add_tx': return (a.type === 'income' ? 'Доход ' : a.type === 'transfer' ? 'Перевод ' : 'Расход ') + U.money(Math.abs(+a.amount || 0)) + (a.note ? ' · ' + a.note : '') + (a.category && window.Tabs.money ? ' · ' + Tabs.money.catFull(a.category, a.sub) : '') + ' · ' + validDate(a.date);
+      case 'update_tx': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return 'Изменить: ' + (t ? (t.note || '') + ' ' + U.money(t.amount) + ' (' + t.date + ')' : a.id) + ' → ' + Object.keys(a).filter(function (k) { return k !== 'do' && k !== 'id'; }).map(function (k) { return k + ': ' + a[k]; }).join(', ');
+      case 'delete_tx': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return 'Удалить: ' + (t ? (t.note || '') + ' ' + U.money(t.amount) + ' (' + t.date + ')' : a.id);
+      case 'categorize': t = Store.list('transactions').find(function (x) { return x.id === a.id; }); return 'Категория: ' + (t ? (t.note || '') + ' ' + U.money(t.amount) : a.id) + ' → ' + (window.Tabs.money ? Tabs.money.catFull(a.category, a.sub) : a.category);
+      case 'add_task': return 'Задача: ' + a.title + (a.due ? ' · до ' + a.due : '');
+      case 'add_homework': return 'Задание: ' + (a.subject ? a.subject + ' — ' : '') + a.title + (a.due ? ' · до ' + a.due : '');
+      case 'update_item': return 'Изменить ' + (a.kind === 'task' ? 'задачу' : 'задание') + (a.title ? ': ' + a.title : '') + (a.due ? ' · срок ' + a.due : '') + (a.done ? ' · выполнено' : '');
+      case 'delete_item': return 'Удалить ' + ({ task: 'задачу', homework: 'задание', countdown: 'особую дату', shopping: 'покупку' }[a.kind] || '') + ' ' + a.id;
+      case 'add_time': return 'Время: ' + (+a.minutes || 0) + ' мин' + (a.note ? ' · ' + a.note : '') + ' · ' + validDate(a.date);
+      case 'add_shopping': return 'В список: ' + (a.items || []).join(', ');
       case 'add_countdown': return (a.emoji || '📅') + ' Особая дата: ' + a.title + ' · ' + a.date + (a.yearly ? ' · каждый год' : '');
-      case 'add_recipe': return '🍳 Рецепт: ' + a.title + ((a.ingredients || []).length ? ' (' + a.ingredients.join(', ') + ')' : '');
-      case 'set_menu': return '📅 Меню ' + validDate(a.date) + ': ' + a.title;
-      case 'pantry_add': return '🏠 Дома есть: ' + (a.items || []).join(', ');
-      case 'pantry_out': return '🏠 Закончилось: ' + (a.names || []).join(', ');
+      case 'add_recipe': return 'Рецепт: ' + a.title + ((a.ingredients || []).length ? ' (' + a.ingredients.join(', ') + ')' : '');
+      case 'set_menu': return 'Меню ' + validDate(a.date) + ': ' + a.title;
+      case 'pantry_add': return 'Дома есть: ' + (a.items || []).join(', ');
+      case 'pantry_out': return 'Закончилось: ' + (a.names || []).join(', ');
     }
-    return '❔ ' + JSON.stringify(a);
+    return JSON.stringify(a);
   }
   function needsConfirm(a) { return /^(update_|delete_)/.test(a.do) || a.do === 'categorize'; }
 
@@ -353,7 +353,7 @@
       if (undo.length) undoFns[idx] = undo;
       history.push(m);
     }).catch(function (e) {
-      history.push({ role: 'model', text: '⚠️ ' + e.message, actions: [], state: [] });
+      history.push({ role: 'model', text: e.message, actions: [], state: [] });
     }).then(function () { busy = false; save(); paint(); });
   }
 
@@ -362,7 +362,7 @@
     panel = document.createElement('div');
     panel.className = 'ai-panel';
     panel.innerHTML =
-      '<div class="ai-head"><b>✨ Помощник</b><span class="spacer"></span>' +
+      '<div class="ai-head"><b>Помощник</b><span class="spacer"></span>' +
         '<button type="button" class="link-btn" data-ai-clear>очистить</button>' +
         '<button type="button" class="icon-x" data-ai-close aria-label="Закрыть"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
       '<div class="ai-list"></div>' +
@@ -409,7 +409,7 @@
     b.className = 'ai-fab';
     b.setAttribute('aria-label', 'Помощник');
     b.setAttribute('data-tip', 'Помощник: запиши или спроси обычными словами');
-    b.textContent = '✨';
+    b.innerHTML = U.icon('chat');
     b.addEventListener('click', open);
     document.body.appendChild(b);
     var hb = document.getElementById('ai-head-btn');

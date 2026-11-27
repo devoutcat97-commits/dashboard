@@ -3,7 +3,7 @@
    - Купил: чеки с товарами (QR-код с чека → товары и цены из ФНС, или вручную).
    - Дома: какие продукты есть сейчас (пополняется из чеков, «закончилось» — одним нажатием).
    - Список: что купить (с примерной ценой по прошлым чекам). «Купил» → трата записывается сама.
-   - Еда: мои рецепты, меню на неделю и «✨ Что приготовить?».
+   - Еда: мои рецепты, меню на неделю и «Что приготовить».
    - Для работы: рабочие покупки отдельно и отметка «возместили».
    Коллекции: purchases (чеки), pantry (дома), recipes, menu, shopping (список).
    Настройка shop.prices — последняя цена каждого товара.
@@ -14,7 +14,7 @@
   var U = window.UI;
   var MD = window.MoneyData;
   var esc = U.esc;
-  var VIEWS = [['bought', '🧾 Купил'], ['home', '🏠 Дома'], ['list', '🛒 Список'], ['food', '🍳 Еда'], ['work', '💼 Для работы']];
+  var VIEWS = [['bought', 'Купил'], ['home', 'Дома'], ['list', 'Список'], ['food', 'Еда'], ['work', 'Для работы']];
   var state = { view: 'bought', open: '' };
   var host = null;
 
@@ -166,11 +166,11 @@
     var dlg = document.createElement('dialog');
     dlg.className = 'sheet';
     var hasDetector = 'BarcodeDetector' in window;
-    dlg.innerHTML = '<div class="sheet-form"><div class="sheet-head"><h2>📷 Чек по QR-коду</h2><button type="button" class="icon-x" data-close aria-label="Закрыть"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+    dlg.innerHTML = '<div class="sheet-form"><div class="sheet-head"><h2>Чек по QR-коду</h2><button type="button" class="icon-x" data-close aria-label="Закрыть"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
       '<div class="sheet-body">' +
         (hasDetector ? '<div class="qr-cam"><video playsinline muted></video><div class="qr-frame"></div></div><p class="field-hint" data-st>Наведи камеру на QR-код внизу чека.</p>' : '<p class="field-hint">Этот браузер не умеет читать QR с камеры. Сфотографируй чек или введи данные с чека вручную.</p>') +
-        '<div class="btn-row"><label class="btn"><input type="file" accept="image/*" capture="environment" hidden data-photo>📸 Фото чека</label>' +
-        '<button type="button" class="btn" data-manual>✍️ Ввести данные с чека</button></div>' +
+        '<div class="btn-row"><label class="btn"><input type="file" accept="image/*" capture="environment" hidden data-photo>Фото чека</label>' +
+        '<button type="button" class="btn" data-manual>Ввести данные с чека</button></div>' +
         '<form class="qr-manual" data-mform hidden autocomplete="off">' +
           '<div class="form-grid"><label class="field field--half"><span class="field-label">Дата и время</span><input type="datetime-local" name="dt" required></label>' +
           '<label class="field field--half"><span class="field-label">Сумма, ₽</span><input name="s" inputmode="decimal" required></label>' +
@@ -226,7 +226,7 @@
     if (dup) { U.toast('Этот чек уже записан'); return; }
     var tx = findTx(r.total, date);
     U.formDialog({
-      title: '🧾 ' + (r.store || 'Чек') + ' · ' + U.money(r.total),
+      title: (r.store || 'Чек') + ' · ' + U.money(r.total),
       submitLabel: 'Сохранить чек',
       values: { kind: 'home', job: 'office', pantry: '1' },
       fields: function (v) {
@@ -368,13 +368,13 @@
     var month = P.filter(function (p) { return U.monthKey(p.date) === mk; });
     var rows = P.slice(0, 40).map(function (p) {
       var open = state.open === p.id;
-      return '<li class="shop-rc' + (open ? ' is-open' : '') + '"><button type="button" class="plan-main" data-sh-open="' + p.id + '"><span class="tx-title">' + esc(p.store || 'Покупка') + (p.source === 'qr' ? ' 🧾' : '') + '</span>' +
+      return '<li class="shop-rc' + (open ? ' is-open' : '') + '"><button type="button" class="plan-main" data-sh-open="' + p.id + '"><span class="tx-title">' + esc(p.store || 'Покупка') + (p.source === 'qr' ? ' · по чеку' : '') + '</span>' +
         '<span class="tx-sub">' + U.dayShort(p.date) + ' · ' + (p.items || []).length + ' ' + U.plural((p.items || []).length, 'позиция', 'позиции', 'позиций') + '</span></button>' +
         '<span class="plan-amt">' + U.money(p.total) + '</span>' +
         (open ? '<ul class="shop-items">' + (p.items || []).map(function (i) { return '<li><span>' + esc(shortName(i.name)) + (i.qty && i.qty !== 1 ? ' × ' + U.num(i.qty) : '') + '</span><b>' + (i.sum ? U.money(i.sum) : '') + '</b></li>'; }).join('') +
           '</ul><button type="button" class="link-btn" data-sh-delp="' + p.id + '">удалить чек</button>' : '') + '</li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Чек по QR</button><button type="button" class="btn" data-sh-manual>✍️ Вручную</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>Чек по QR</button><button type="button" class="btn" data-sh-manual>Вручную</button></div>' +
       '<div class="grid grid--2"><div class="card tile"><div class="tile-label">Покупки за месяц</div><div class="tile-value">' + U.money(Math.round(monthTotal(month))) + '</div><div class="tile-hint">' + month.length + ' ' + U.plural(month.length, 'чек', 'чека', 'чеков') + '</div></div>' +
       '<div class="card tile"><div class="tile-label">Знаю цен</div><div class="tile-value">' + Object.keys(prices()).length + '</div><div class="tile-hint">из твоих чеков</div></div></div>' +
       (rows ? '<ul class="plan-list card">' + rows + '</ul>' : U.empty({ emoji: '🧾', title: 'Чеков пока нет', text: 'Отсканируй QR-код с чека — дашборд узнает, что ты купил и почём, и сам положит продукты в «Дома».', action: 'Сканировать чек', attr: 'data-sh-scan' }));
@@ -386,7 +386,7 @@
       return '<li class="shop-item"><span>' + esc(p.name) + '</span><span class="muted">' + (p.since ? U.dayShort(p.since).split(',')[0] : '') + '</span>' +
         '<button type="button" class="btn btn-small" data-sh-out="' + p.id + '" data-tip="Закончилось — убрать и добавить в список">закончилось</button></li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-cook>✨ Что приготовить?</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-cook>Что приготовить</button></div>' +
       '<form class="shop-add card" data-sh-pform autocomplete="off"><input name="t" placeholder="Есть дома: рис, яйца, лук…" aria-label="Добавить продукт"><button type="submit" class="btn btn-small btn-primary">＋</button></form>' +
       (rows ? '<ul class="shop-list card">' + rows + '</ul><p class="field-hint">Продукты попадают сюда из чеков и списка покупок. Нажми «закончилось» — уберу и спрошу, добавить ли в список.</p>'
         : U.empty({ emoji: '🏠', title: 'Здесь будет то, что есть дома', text: 'Продукты появятся сами после сканирования чеков. Можно вписать и вручную.' }));
@@ -401,16 +401,16 @@
       if (p && !s.done) { est += p.price; known++; }
       return '<li class="shop-item' + (s.done ? ' is-done' : '') + '"><label><input type="checkbox" data-sh-check="' + s.id + '"' + (s.done ? ' checked' : '') + '><span>' + esc(s.text) + '</span></label>' +
         (p ? '<span class="muted" data-tip="' + esc((p.store ? p.store + ', ' : '') + U.dayShort(p.date) + (p.full ? '\n' + p.full : '')) + '">≈ ' + U.money(Math.round(p.price)) + (p.store === 'Магнит' ? ' М' : '') + '</span>' : '') +
-        (!s.done && promosFor(s.text).length ? '<span class="shop-promo" data-tip="' + esc(promosFor(s.text).slice(0, 4).map(function (x) { return x.name + ' — ' + x.price + ' ₽ (было ' + x.old + ', ' + x.until + ')'; }).join('\n')) + '">🏷️ акция</span>' : '') +
+        (!s.done && promosFor(s.text).length ? '<span class="shop-promo" data-tip="' + esc(promosFor(s.text).slice(0, 4).map(function (x) { return x.name + ' — ' + x.price + ' ₽ (было ' + x.old + ', ' + x.until + ')'; }).join('\n')) + '">акция</span>' : '') +
         '<button type="button" class="icon-btn" data-sh-del="' + s.id + '" aria-label="Убрать">×</button></li>';
     };
     var html = open.map(row).join('') + done.map(row).join('');
     return '<form class="shop-add card" data-sh-lform autocomplete="off"><input name="t" placeholder="Молоко, хлеб, яйца…" aria-label="Что купить"><button type="submit" class="btn btn-small btn-primary">＋</button></form>' +
       (html ? '<ul class="shop-list card">' + html + '</ul>' : U.empty({ emoji: '🛒', title: 'Список пуст', text: 'Впиши, что нужно купить, или собери список из меню на неделю во вкладке «Еда».' })) +
-      (known ? '<p class="field-hint">Примерно ' + U.money(Math.round(est)) + ' (известно для ' + known + ' из ' + open.length + '). «М» — цена с сайта Магнита, остальное — из твоих чеков. 🏷️ — сейчас есть акция в Марии-Ра.</p>' : '') +
-      (open.length ? '<div class="btn-row"><button type="button" class="btn" data-sh-prices>🏷️ Цены и акции в магазинах</button></div>' : '') +
+      (known ? '<p class="field-hint">Примерно ' + U.money(Math.round(est)) + ' (известно для ' + known + ' из ' + open.length + '). «М» — цена с сайта Магнита, остальное — из твоих чеков. «акция» — сейчас есть акция в Марии-Ра.</p>' : '') +
+      (open.length ? '<div class="btn-row"><button type="button" class="btn" data-sh-prices>Цены и акции в магазинах</button></div>' : '') +
       promoHtml(open) +
-      (done.length ? '<div class="btn-row"><button type="button" class="btn btn-primary" data-sh-buy>💸 Купил отмеченное (' + done.length + ')</button></div>' : '');
+      (done.length ? '<div class="btn-row"><button type="button" class="btn btn-primary" data-sh-buy>Купил отмеченное (' + done.length + ')</button></div>' : '');
   }
 
   function promoHtml(open) {
@@ -419,7 +419,7 @@
     var hits = [];
     open.forEach(function (s) { promosFor(s.text).slice(0, 3).forEach(function (x) { if (hits.indexOf(x) === -1) hits.push(x); }); });
     var all = state.promoAll ? pr.items : hits;
-    return '<section class="card"><div class="card-head"><h2>🏷️ Акции Марии-Ра</h2><button type="button" class="link-btn" data-sh-promoall>' + (state.promoAll ? 'только по списку' : 'все (' + pr.items.length + ')') + '</button></div>' +
+    return '<section class="card"><div class="card-head"><h2>Акции Марии-Ра</h2><button type="button" class="link-btn" data-sh-promoall>' + (state.promoAll ? 'только по списку' : 'все (' + pr.items.length + ')') + '</button></div>' +
       (all.length ? '<ul class="shop-items">' + all.slice(0, 80).map(function (x) {
         return '<li><span>' + esc(shortName(x.name)) + ' <small class="muted">' + esc(x.until) + '</small></span><b>' + U.money(x.price) + (x.old ? ' <s class="muted">' + U.money(x.old) + '</s>' : '') + '</b></li>';
       }).join('') + '</ul>' : '<p class="chart-empty">На товары из списка акций сейчас нет.</p>') +
@@ -438,10 +438,10 @@
     var rows = R.map(function (r) {
       var miss = missingFor(r);
       return '<li class="plan-row"><button type="button" class="plan-main" data-sh-recipe="' + r.id + '"><span class="tx-title">' + esc(r.title) + '</span>' +
-        '<span class="tx-sub">' + (miss.length ? 'не хватает: ' + esc(miss.slice(0, 4).join(', ')) + (miss.length > 4 ? '…' : '') : '✅ всё есть дома') + '</span></button>' +
+        '<span class="tx-sub">' + (miss.length ? 'не хватает: ' + esc(miss.slice(0, 4).join(', ')) + (miss.length > 4 ? '…' : '') : 'всё есть дома') + '</span></button>' +
         (miss.length ? '<button type="button" class="btn btn-small" data-sh-need="' + r.id + '">в список</button>' : '') + '</li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-cook>✨ Что приготовить?</button><button type="button" class="btn" data-sh-addrecipe>＋ Рецепт</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-cook>Что приготовить</button><button type="button" class="btn" data-sh-addrecipe>＋ Рецепт</button></div>' +
       '<section class="card"><div class="card-head"><h2>Меню на неделю</h2><button type="button" class="btn btn-small" data-sh-weekbuy>Собрать покупки</button></div>' +
         (R.length ? '<div class="menu-week">' + week + '</div>' : '<p class="chart-empty">Добавь пару рецептов — и выбирай блюда по дням.</p>') + '</section>' +
       '<div class="section-row"><h2 class="section-title">Мои рецепты</h2></div>' +
@@ -468,7 +468,7 @@
         '<span class="tx-sub">' + U.dayShort(t.date) + (p && p.job ? ' · ' + (p.job === 'remote' ? 'дистанционная' : 'очная') : '') + (what ? ' · ' + esc(what) : '') + '</span></button>' +
         '<span class="plan-amt">' + U.money(t.amount) + '</span>' + st + '</li>';
     }).join('');
-    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>📷 Чек по QR</button><button type="button" class="btn" data-sh-wmanual>✍️ Вручную</button></div>' +
+    return '<div class="btn-row shop-actions"><button type="button" class="btn btn-primary" data-sh-scan>Чек по QR</button><button type="button" class="btn" data-sh-wmanual>Вручную</button></div>' +
       '<div class="grid grid--2"><div class="card tile"><div class="tile-label">Для работы за месяц</div><div class="tile-value">' + U.money(Math.round(month)) + '</div></div>' +
       '<div class="card tile"><div class="tile-label">Должны вернуть</div><div class="tile-value' + (due ? ' is-bad' : '') + '">' + U.money(Math.round(due)) + '</div><div class="tile-hint">' + (due ? 'отметь, когда вернут' : 'всё возмещено') + '</div></div></div>' +
       (rows ? '<ul class="plan-list card">' + rows + '</ul>' : U.empty({ emoji: '💼', title: 'Рабочих покупок пока нет', text: 'Отсканируй чек и выбери «Для работы» — или впиши покупку. Сюда же попадают траты с категорией «Расходы на работу».' }));

@@ -84,7 +84,7 @@
     Store.list('transactions').forEach(function (t) {
       var title = T.money ? T.money.txTitle(t) : '';
       if (!hit(t.note, title)) return;
-      res.push({ date: t.date, emoji: t.type === 'income' ? '💰' : t.type === 'transfer' ? '🔁' : T.money.catEmoji(t.category),
+      res.push({ date: t.date, emoji: t.type === 'income' ? '💰' : t.type === 'transfer' ? '🔁' : '💸',
         title: (t.note || title) + ' · ' + (t.type === 'expense' ? '−' : t.type === 'income' ? '+' : '') + U.money(t.amount),
         hint: 'Деньги · ' + U.dayShort(t.date), tab: 'money', run: function () { T.money.openTx(t.id); } });
     });
@@ -134,7 +134,7 @@
 
   function row(o, i) {
     return '<button type="button" class="cmd-row' + (i === sel ? ' is-sel' : '') + '" data-i="' + i + '">' +
-      '<span class="cmd-emoji">' + o.emoji + '</span><span class="cmd-main"><span class="cmd-title">' + esc(o.title) + '</span>' +
+      '<span class="cmd-emoji">' + U.emo(o.emoji) + '</span><span class="cmd-main"><span class="cmd-title">' + esc(o.title) + '</span>' +
       '<span class="cmd-sub">' + esc(o.hint) + '</span></span>' + (i === sel ? '<kbd>Enter</kbd>' : '') + '</button>';
   }
 

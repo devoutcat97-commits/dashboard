@@ -343,10 +343,72 @@
 
   // ---------- Пустой экран ----------
   // { emoji, title, text, action: 'Добавить', attr: 'data-action="add-tx"' }
+  // ---------- Линейные значки ----------
+  // Один набор на весь интерфейс (тонкая линия, цвет текста). Эмодзи в кнопках, заголовках и подсказках
+  // заменены ими; эмодзи остаются только в содержимом: особые даты, категории трат, погода, праздники 🎉.
+  var ICONS = {
+    wallet: '<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v3h-4a2 2 0 0 0 0 4h4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/>',
+    check: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m8.5 12 2.5 2.5 5-5"/>',
+    checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 5-5"/>',
+    hourglass: '<path d="M6 3h12M6 21h12M7.5 3v3.5a4.5 4.5 0 0 0 9 0V3M7.5 21v-3.5a4.5 4.5 0 0 1 9 0V21"/>',
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+    book: '<path d="M4 19.5V5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5Zm0 0A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    moon: '<path d="M20 14.6A8 8 0 1 1 9.4 4a6.5 6.5 0 0 0 10.6 10.6Z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
+    cart: '<path d="M3 4h2.2l2.2 11h11l2-8H7"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/>',
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    card: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
+    receipt: '<path d="M5 3v18l2.3-1.5L9.7 21l2.3-1.5 2.3 1.5 2.4-1.5L19 21V3l-2.3 1.5L14.3 3 12 4.5 9.7 3 7.3 4.5z"/><path d="M9 9h6M9 13h6"/>',
+    gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21 8 9l4-6 4 6z"/>',
+    piggy: '<path d="M5 11a7 6 0 0 1 12-3h2v3l-1.5 1.5V16H15v2h-2.5v-2h-3v2H7v-2.5A6 6 0 0 1 5 11Z"/><path d="M14.5 10.5v.01"/>',
+    plane: '<path d="M10.5 13.5 3 11l1.5-1.5 8 .5 4.5-5a2.1 2.1 0 0 1 3 3l-5 4.5.5 8L14 22l-2.5-7.5L8 18v3l-1.5 1-1-3.5L2 17.5l1-1.5h3z"/>',
+    tag: '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
+    camera: '<path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z"/><circle cx="12" cy="13" r="3.5"/>',
+    dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+    trendUp: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+    trendDown: '<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
+    alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
+    stop: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+    work: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 12.5h18"/>',
+    chat: '<path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    sprout: '<path d="M7 21h10M12 21v-9M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 12c0-3 2.5-5 6-5 0 3.5-2.5 5-6 5z"/>',
+    flame: '<path d="M12 22c4 0 7-2.7 7-7 0-4-3-6-4-10-1.5 2-2 3.5-2 5-1-1-2-2-2.5-3.5C8 9 5 11.5 5 15c0 4.3 3 7 7 7z"/>',
+    bag: '<path d="M5.5 7h13l1 14h-15z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    cook: '<path d="M5 3v8a2 2 0 0 0 2 2v8M9 3v8a2 2 0 0 1-2 2M7 3v6M18 21V3c-2 1-3.5 3.5-3.5 7v3H18"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.1 4.5 4.5 0 0 0 7 18z"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+    grad: '<path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2.5 9 2.5 12 0v-5"/>',
+    pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+    repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>'
+  };
+  var EMO = {
+    '💸': 'wallet', '💰': 'wallet', '✅': 'check', '☑️': 'checkCircle', '⏳': 'hourglass', '🎤': 'mic', '📚': 'book', '📖': 'book',
+    '⏱️': 'clock', '📄': 'file', '🌙': 'moon', '🔍': 'search', '🔎': 'search', '🛒': 'cart', '📊': 'chart', '🗓️': 'calendar',
+    '💳': 'card', '🧾': 'receipt', '💎': 'gem', '🐷': 'piggy', '✈️': 'plane', '🧳': 'plane', '🏷️': 'tag', '📷': 'camera',
+    '🎲': 'dice', '🤝': 'users', '📈': 'trendUp', '📉': 'trendDown', '⚠️': 'alert', '⛔': 'stop', '💼': 'work', '✨': 'chat',
+    '🧐': 'eye', '🌱': 'sprout', '🔥': 'flame', '🛍️': 'bag', '🎯': 'target', '🏠': 'home', '🍳': 'cook', '☁️': 'cloud',
+    '🔔': 'bell', '🎓': 'grad', '📝': 'pen', '🗂️': 'folder', '🏖️': 'sun', '🎁': 'gift', '🎉': 'checkCircle', '🔁': 'repeat'
+  };
+  function icon(name, cls) {
+    return ICONS[name] ? '<svg class="ico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>' : '';
+  }
+  // Эмодзи из интерфейса → линейный значок; неизвестное (содержимое) остаётся как есть.
+  function emo(e, cls) { return EMO[e] ? icon(EMO[e], cls) : esc(e || ''); }
+
   function empty(o) {
     return (
       '<div class="card empty-state">' +
-        '<div class="empty-emoji" aria-hidden="true">' + o.emoji + '</div>' +
+        '<div class="empty-emoji" aria-hidden="true">' + emo(o.emoji) + '</div>' +
         '<div class="empty-title">' + esc(o.title) + '</div>' +
         (o.text ? '<p class="empty-text">' + esc(o.text) + '</p>' : '') +
         (o.action ? '<button type="button" class="btn btn-primary btn-small" ' + (o.attr || '') + '>' + esc(o.action) + '</button>' : '') +
@@ -363,7 +425,7 @@
   });
 
   window.UI = {
-    empty: empty, ring: ring,
+    empty: empty, ring: ring, icon: icon, emo: emo,
     esc: esc, plural: plural,
     round2: round2, num: num, money: money, signed: signed, parseMoney: parseMoney, moneyInput: moneyInput,
     pad: pad, iso: iso, today: today, toDate: toDate, monthKey: monthKey, addMonths: addMonths, daysIn: daysIn,

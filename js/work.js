@@ -157,7 +157,7 @@
     var list = open.length
       ? '<ul class="task-list card">' + open.map(taskItem).join('') + '</ul>'
       : U.empty(done.length
-          ? { emoji: '🏖️', title: 'Все задачи сделаны!', text: 'Можно выдохнуть. Новая задача — строкой выше.' }
+          ? { emoji: '🏖️', title: 'Все задачи сделаны', text: 'Можно выдохнуть. Новая задача — строкой выше.' }
           : { emoji: '🗂️', title: 'Пока нет задач', text: 'Напиши задачу строкой выше: например, «отчёт по проекту завтра !».', action: 'Добавить задачу', attr: 'data-focus="[data-role=task-quick]"' });
 
     var doneBlock = done.length
@@ -229,12 +229,12 @@
         title: t.title, job: t.job, due: next, important: t.important, note: t.note || '', repeat: t.repeat, done: false,
         subtasks: (t.subtasks || []).map(function (s) { return { id: s.id, text: s.text, done: false }; })
       });
-      U.toast('Готово! Следующая — ' + dueLabel({ due: next }).text.toLowerCase());
+      U.toast('Готово. Следующая — ' + dueLabel({ due: next }).text.toLowerCase());
     } else if (!openTasks(t.job).length) {
       if (window.FX) FX.confetti();
-      U.toast('Все задачи закрыты! 🎉');
+      U.toast('Все задачи закрыты 🎉');
     } else {
-      U.toast('Готово!');
+      U.toast('Готово');
     }
   }
 
@@ -609,7 +609,7 @@
       if (task) {
         var subs = (task.subtasks || []).map(function (s) { return s.id === e.target.dataset.id ? Object.assign({}, s, { done: e.target.checked }) : s; });
         Store.update('work.tasks', task.id, { subtasks: subs });
-        if (e.target.checked && subs.every(function (s) { return s.done; })) U.toast('Все подзадачи готовы — можно закрывать задачу ✨');
+        if (e.target.checked && subs.every(function (s) { return s.done; })) U.toast('Все подзадачи готовы — можно закрывать задачу');
       }
     } else if (role === 'revenue') {
       var s = e.target.value.trim();

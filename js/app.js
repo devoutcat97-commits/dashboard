@@ -178,7 +178,7 @@
         '<div class="btn-row"><button type="button" class="btn btn-primary" data-act="cloud-in">Войти через Google</button></div>';
     } else {
       var u = C.user();
-      body = '<p class="field-hint" data-hint="cloud">☁️ ' + U.esc(C.label()) + ' · ' + U.esc(u.email || u.name || '') +
+      body = '<p class="field-hint" data-hint="cloud">' + U.esc(C.label()) + ' · ' + U.esc(u.email || u.name || '') +
         (C.error() ? '<br>' + U.esc(C.error()) : '') + '</p>' +
         '<div class="btn-row"><button type="button" class="btn" data-act="cloud-sync">Синхронизировать сейчас</button>' +
         '<button type="button" class="btn" data-act="cloud-out">Выйти</button></div>';
@@ -300,7 +300,7 @@
         var ph = dlg.querySelector('[data-hint="push"]');
         ph.textContent = 'Подключаю…';
         (Push.enabled() ? Push.disable() : Push.enable()).then(function () {
-          U.toast(Push.enabled() ? 'Push включены 🔔' : 'Push выключены на этом устройстве');
+          U.toast(Push.enabled() ? 'Push включены' : 'Push выключены на этом устройстве');
           dlg.close();
         }).catch(function (err) { ph.textContent = err.message; });
         return;

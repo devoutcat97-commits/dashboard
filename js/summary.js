@@ -114,7 +114,7 @@
     doneOnly(kind, id, parent);
     var added = Store.list('work.tasks').map(function (t) { return t.id; }).filter(function (x) { return taskIds.indexOf(x) === -1; });
     var shown = document.querySelector('.toast.is-on span');
-    U.toast(shown ? shown.textContent : 'Готово!', { action: 'Отменить', onAction: function () { undoDone(kind, id, parent, added); } });
+    U.toast(shown ? shown.textContent : 'Готово', { action: 'Отменить', onAction: function () { undoDone(kind, id, parent, added); } });
   }
   function undoDone(kind, id, parent, added) {
     added.forEach(function (x) { Store.remove('work.tasks', x); });   // следующий повтор задачи
@@ -135,7 +135,7 @@
     var now = new Date().toISOString();
     if (kind === 'task' && Tabs.work && Tabs.work.completeTask) {
       Tabs.work.completeTask(id);
-      if (before > 0 && todayLeft() === 0) { if (window.FX) FX.confetti(); U.toast('Все дела на сегодня сделаны! 🎉'); }
+      if (before > 0 && todayLeft() === 0) { if (window.FX) FX.confetti(); U.toast('Все дела на сегодня сделаны 🎉'); }
       return;
     }
     if (kind === 'task') Store.update('work.tasks', id, { done: true, doneAt: now });
@@ -152,9 +152,9 @@
     }
     if (before > 0 && todayLeft() === 0) {
       if (window.FX) FX.confetti();
-      U.toast('Все дела на сегодня сделаны! 🎉');
+      U.toast('Все дела на сегодня сделаны 🎉');
     } else {
-      U.toast('Готово!');
+      U.toast('Готово');
     }
   }
 
@@ -175,11 +175,11 @@
   }
 
   // Быстрые кнопки под шапкой.
-  var QA = [['tx', '💸', 'Трата'], ['task', '✅', 'Задача'], ['hw', '📚', 'Задание'], ['time', '⏱️', 'Время'], ['import', '📄', 'Выписка']];
+  var QA = [['tx', 'wallet', 'Трата'], ['task', 'check', 'Задача'], ['hw', 'book', 'Задание'], ['time', 'clock', 'Время'], ['import', 'file', 'Выписка']];
   function quickActionsHtml() {
-    var list = QA.slice(0, 2).concat(window.Focus ? [['focus', '⏳', 'Фокус']] : [], window.Command && Command.canVoice ? [['voice', '🎤', 'Голосом']] : [], QA.slice(2));
+    var list = QA.slice(0, 2).concat(window.Focus ? [['focus', 'hourglass', 'Фокус']] : [], window.Command && Command.canVoice ? [['voice', 'mic', 'Голосом']] : [], QA.slice(2));
     return '<div class="qa">' + list.map(function (a) {
-      return '<button type="button" class="qa-btn" data-qa="' + a[0] + '"><span class="qa-ico">' + a[1] + '</span><span class="qa-label">' + a[2] + '</span></button>';
+      return '<button type="button" class="qa-btn" data-qa="' + a[0] + '"><span class="qa-ico">' + U.icon(a[1]) + '</span><span class="qa-label">' + a[2] + '</span></button>';
     }).join('') + '</div>';
   }
   function runQuickAction(k) {
@@ -287,7 +287,7 @@
     function stat(label, value, hint) { return '<div><span class="tile-label">' + label + '</span><b>' + value + '</b>' + (hint ? '<small>' + hint + '</small>' : '') + '</div>'; }
     return (
       '<section class="card weekreport">' +
-        '<div class="card-head"><h2>📊 ' + (isMonday ? 'Итоги прошлой недели' : 'Итоги недели') + '</h2>' +
+        '<div class="card-head"><h2>' + U.icon('chart') + (isMonday ? 'Итоги прошлой недели' : 'Итоги недели') + '</h2>' +
           '<button type="button" class="icon-btn" data-wr-close="1" aria-label="Скрыть" data-tip="Скрыть до следующей недели">×</button></div>' +
         '<p class="field-hint">' + U.toDate(from).getDate() + ' ' + U.monthGen(from) + ' – ' + U.toDate(to).getDate() + ' ' + U.monthGen(to) + '</p>' +
         '<div class="dayend-stats wr-stats">' +
@@ -295,7 +295,7 @@
           stat('Доходы', U.money(income), '') +
           stat('Закрыто дел', String(closed), 'задачи и задания') +
           stat('Записано времени', T.time ? T.time.fmtDur(minutes) : '—', topTime && T.time ? 'больше всего — ' + esc(T.time.catName(topTime)) : '') +
-          stat('Пропуски пар', String(absences), absences ? 'загляни в «Учёбу»' : 'без пропусков 👏') +
+          stat('Пропуски пар', String(absences), absences ? 'загляни в «Учёбу»' : 'без пропусков') +
         '</div>' +
         '<h3 class="block-sub">План на ' + (isMonday ? 'эту' : 'следующую') + ' неделю · ' + lessons + ' ' + U.plural(lessons, 'пара', 'пары', 'пар') + '</h3>' +
         (planList ? '<ul class="wr-plan">' + planList + '</ul>' + (plan.length > 8 ? '<p class="field-hint">и ещё ' + (plan.length - 8) + '…</p>' : '') : '<p class="muted today-note">Сроков на неделю нет.</p>') +
@@ -402,7 +402,7 @@
     }).join('');
     var total = Store.list('countdowns').length;
     return '<div class="countdowns">' + chips +
-      (total ? '<button type="button" class="cd-chip cd-add" data-cd-all="1">📅 <span>Особые даты · ' + total + '</span></button>' : '') +
+      (total ? '<button type="button" class="cd-chip cd-add" data-cd-all="1">' + U.icon('calendar') + '<span>Особые даты · ' + total + '</span></button>' : '') +
       '<button type="button" class="cd-chip cd-add" data-cd-new="1">＋ <span>Особая дата</span></button></div>';
   }
 
@@ -489,7 +489,7 @@
     var prepHtml = prep.length
       ? '<h3 class="block-sub">Подготовка к экзаменам</h3><ul class="ag-list">' + prep.map(function (p) {
           return '<li class="ag-item"><span class="ag-dot ag-dot--exam"></span><a class="ag-link" href="#study" data-prep="' + esc(p.id) + '"><span class="ag-main">' +
-            '<span class="ag-title">📚 ' + esc(p.subject) + ' — ' + p.perDay + ' ' + U.plural(p.perDay, 'билет', 'билета', 'билетов') + ' сегодня</span>' +
+            '<span class="ag-title">' + esc(p.subject) + ' — ' + p.perDay + ' ' + U.plural(p.perDay, 'билет', 'билета', 'билетов') + ' сегодня</span>' +
             '<span class="ag-meta">выучено ' + p.done + ' из ' + p.total + '</span></span>' + U.ring(p.done / p.total, { size: 30, stroke: 4, text: '' }) + '</a></li>';
         }).join('') + '</ul>'
       : '';
@@ -501,7 +501,7 @@
     return (
       '<section class="card today-card">' +
         '<div class="card-head"><h2>' + ico('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>') + 'Сегодня</h2>' +
-          (dayEndVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-dayend-open="1">🌙 Итог дня</button>') + '</div>' +
+          (dayEndVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-dayend-open="1">Итог дня</button>') + '</div>' +
         (slotsHtml ? '<ul class="slots">' + slotsHtml + '</ul>' : '') + noLessons + todo + prepHtml +
       '</section>'
     );
@@ -551,7 +551,7 @@
       ? tile('Ещё должно прийти', U.money(pay.waiting), 'зарплата за ' + monthName)
       : tile('Доходы за ' + monthName, U.money(o.income), pay && (pay.officeExpected || pay.remoteExpected) ? 'вся ожидаемая зарплата пришла' : '');
     var debtLine = (o.debts || []).filter(function (d) { return Math.abs(d.balance) > 0.009; }).map(function (d) {
-      return '<div class="acc">🤝<span class="acc-name">' + esc(d.name) + '</span><span class="acc-val ' + (d.balance > 0 ? 'is-plus' : 'is-minus') + '">' +
+      return '<div class="acc">' + U.icon('users') + '<span class="acc-name">' + esc(d.name) + '</span><span class="acc-val ' + (d.balance > 0 ? 'is-plus' : 'is-minus') + '">' +
         (d.balance > 0 ? 'должен ' + U.money(d.balance) : 'ты должен ' + U.money(-d.balance)) + '</span></div>';
     }).join('');
     var accounts = debtLine + o.accounts.map(function (a) {
@@ -578,8 +578,8 @@
     return (
       '<section class="summary-block">' +
         '<div class="section-row"><h2 class="section-title">' + ico('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>') + 'Неделя в цифрах</h2>' +
-          '<span class="section-btns"><a class="btn btn-small btn-ghost" href="#time">⏱️ Время</a>' +
-          (weekReportVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-wr-open="1">📊 Отчёт недели</button>') + '</span></div>' +
+          '<span class="section-btns"><a class="btn btn-small btn-ghost" href="#time">Время</a>' +
+          (weekReportVisible() ? '' : '<button type="button" class="btn btn-small btn-ghost" data-wr-open="1">Отчёт недели</button>') + '</span></div>' +
         '<div class="grid grid--4">' +
           (time ? tile('Часов записано', time.text, 'прошлая неделя — ' + time.prevText, '#time') : '') +
           tile('Закрыто дел', String(closed), 'задачи и задания с понедельника', '#work') +
@@ -602,7 +602,7 @@
     var list = Tabs.money && Tabs.money.alerts ? Tabs.money.alerts() : [];
     if (!list.length) return '';
     return '<div class="alerts">' + list.map(function (a) {
-      return '<a class="alert alert--' + a.level + '" href="#' + a.tab + '"><span class="alert-emoji">' + a.emoji + '</span><span>' + esc(a.text) + '</span>' + I.arrow + '</a>';
+      return '<a class="alert alert--' + a.level + '" href="#' + a.tab + '"><span class="alert-emoji">' + U.emo(a.emoji) + '</span><span>' + esc(a.text) + '</span>' + I.arrow + '</a>';
     }).join('') + '</div>';
   }
 
@@ -711,7 +711,7 @@
   //  Итог дня (вечером)
   // ============================================================
   var showDayEnd = false;
-  var QUICK_TIME = [['thesis', '🎓 ВКР'], ['selfstudy', '📖 Учёба'], ['sport', '🏃 Спорт'], ['road', '🚌 Дорога'], ['fun', '🎮 Отдых']];
+  var QUICK_TIME = [['thesis', 'ВКР'], ['selfstudy', 'Учёба'], ['sport', 'Спорт'], ['road', 'Дорога'], ['fun', 'Отдых']];
 
   function dayEndVisible() {
     if (showDayEnd) return true;
@@ -737,7 +737,7 @@
       : '';
     return (
       '<section class="card dayend">' +
-        '<div class="card-head"><h2>🌙 Итог дня</h2><button type="button" class="icon-btn" data-dayend-close="1" aria-label="Скрыть до завтра" data-tip="Скрыть до завтра">×</button></div>' +
+        '<div class="card-head"><h2>' + U.icon('moon') + 'Итог дня</h2><button type="button" class="icon-btn" data-dayend-close="1" aria-label="Скрыть до завтра" data-tip="Скрыть до завтра">×</button></div>' +
         '<div class="dayend-stats">' +
           '<div><span class="tile-label">Сделано</span><b>' + done.length + '</b><small>' + (done.length ? esc(done.slice(0, 2).map(function (x) { return x.title; }).join(', ')) + (done.length > 2 ? '…' : '') : 'дел не закрыто') + '</small></div>' +
           '<div><span class="tile-label">Потрачено</span><b>' + U.money(spent) + '</b><small>' + spentList.length + ' ' + U.plural(spentList.length, 'покупка', 'покупки', 'покупок') + '</small></div>' +
@@ -777,7 +777,7 @@
       onSubmit: function (v) {
         var m = parseInt(v.dur, 10) || 60;
         Store.add('time.entries', { category: cat, date: U.today(), minutes: m, start: '', end: '', note: '' });
-        U.toast('Записано: ' + label.replace(/^\S+\s/, '') + ' · ' + (Tabs.time ? Tabs.time.fmtDur(m) : m + ' мин'));
+        U.toast('Записано: ' + label + ' · ' + (Tabs.time ? Tabs.time.fmtDur(m) : m + ' мин'));
       }
     });
   }
@@ -802,13 +802,13 @@
     }).join('');
     return (
       '<section class="card shop-card">' +
-        '<div class="card-head"><h2>🛒 Список покупок</h2>' + (open.length ? '<span class="muted">' + open.length + ' ' + U.plural(open.length, 'пункт', 'пункта', 'пунктов') + '</span>' : '') + '</div>' +
+        '<div class="card-head"><h2>' + U.icon('cart') + 'Список покупок</h2>' + (open.length ? '<span class="muted">' + open.length + ' ' + U.plural(open.length, 'пункт', 'пункта', 'пунктов') + '</span>' : '') + '</div>' +
         '<form class="shop-add" data-shop-form="1" autocomplete="off"><input type="text" name="text" maxlength="80" placeholder="Молоко, хлеб, яйца…" aria-label="Что купить">' +
           '<button type="submit" class="btn btn-small btn-primary">＋</button></form>' +
         (tips.length ? '<div class="chips shop-tips">' + tips.map(function (t) { return '<button type="button" class="chip-btn" data-shop-tip="' + esc(t) + '">＋ ' + esc(t) + '</button>'; }).join('') + '</div>' : '') +
         (rows ? '<ul class="shop-list">' + rows + '</ul>' : '<p class="muted today-note">Список пуст. Можно вписать несколько через запятую.</p>') +
         (done.length ? '<div class="btn-row shop-foot"><span class="muted">куплено: ' + done.length + '</span>' +
-          '<button type="button" class="btn btn-small btn-primary" data-shop-pay="1">💸 Записать трату</button>' +
+          '<button type="button" class="btn btn-small btn-primary" data-shop-pay="1">Записать трату</button>' +
           '<button type="button" class="btn btn-small" data-shop-clear="1">Очистить</button></div>' : '') +
       '</section>'
     );

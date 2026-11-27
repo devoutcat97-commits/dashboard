@@ -2433,3 +2433,88 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .ld-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .ld-note { margin: 8px 0 0; font-size: 13px; }
 @media (hover: hover) { .ld-day:hover { border-color: var(--border); } }
+
+/* ============================================================
+   Unslop-проход (навык unslop by @heydamir, CC BY 4.0):
+   эмодзи в интерфейсе → линейные значки, спокойная кнопка помощника,
+   подписи без капса, наведение без прыжков и вращений.
+   ============================================================ */
+/* Значки на месте бывших эмодзи */
+.qa-ico .ico { width: 20px; height: 20px; color: var(--text); }
+.alert-emoji { display: inline-grid; place-items: center; }
+.alert-emoji .ico { width: 18px; height: 18px; }
+.cmd-emoji { display: grid; place-items: center; color: var(--text-2); }
+.cmd-emoji .ico { width: 18px; height: 18px; }
+.banner-emoji .ico { width: 24px; height: 24px; color: var(--text-2); }
+.drop-emoji .ico { width: 44px; height: 44px; }
+.drop-emoji { animation: none; }
+.ins .ico { width: 16px; height: 16px; margin-top: 2px; }
+.acc .ico { width: 16px; height: 16px; color: var(--text-2); }
+.empty-emoji { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-bottom: 12px; border-radius: 50%; background: var(--surface-2); color: var(--text-2); font-size: 28px; animation: none; }
+.empty-emoji .ico { width: 26px; height: 26px; }
+.focus-pill { display: inline-flex; align-items: center; gap: 8px; }
+.focus-pill .ico { width: 16px; height: 16px; }
+.focus-pill span { overflow: hidden; text-overflow: ellipsis; }
+.cd-chip .ico { width: 16px; height: 16px; }
+
+/* Помощник: без фиолетового градиента, цветной тени и блёсток — салатовая кнопка как остальные главные */
+.ai-fab { place-items: center; background: var(--lime); color: var(--on-lime); box-shadow: 0 6px 18px rgba(23, 20, 43, .18); transition: background-color .15s ease-out, transform .15s ease-out; }
+.ai-fab .ico { width: 22px; height: 22px; }
+.ai-fab:hover { transform: none; background: color-mix(in srgb, var(--lime) 88%, #000); }
+.ai-fab:active { transform: scale(.96); }
+.ai-head-btn .ico { width: 18px; height: 18px; }
+
+/* Подписи обычными буквами вместо КАПСА с разрядкой */
+.todo-head, .block-sub, .cmd-group, .cal-wd, .wr-day { text-transform: none; letter-spacing: 0; }
+.block-sub, .todo-head { font-size: 13px; }
+
+/* Наведение: только смена цвета и тени, без прыжков, вращений и подмигиваний */
+.btn-primary:hover { transform: none; box-shadow: none; filter: brightness(.97); }
+.tile--link:hover, a.stat:hover { transform: none; }
+.card:hover .card-head h2 .ico, .section-row:hover .section-title .ico { transform: none; }
+.money-gear:hover .ico { transform: none; }
+.qa-btn:hover { transform: none; }
+.qa-btn:hover .qa-ico { transform: none; }
+.swatch:hover .swatch-dot { transform: none; }
+.badge.is-got:hover { transform: none; }
+.nav a:hover .ico { animation: none; }
+@media (hover: hover) { .hero-stat:hover { transform: none; } }
+
+/* «Тягучая» подсветка меню (js/fx.js → moveIndicator): двигается через clip-path, размеры — без перехода */
+.nav-ind { transition: opacity .2s; will-change: clip-path; }
+@media (max-width: 859.98px) {
+  .nav-ind { display: block; background: var(--lime); border-radius: 12px; }
+  .nav a[aria-current="page"] .ico { background: transparent; }
+}
+
+/* ============================================================
+   Траты по дням — тепловая карта месяца (Деньги → Обзор)
+   ============================================================ */
+.heat-card { margin-top: 12px; }
+.heat-wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 28px; margin-top: 6px; }
+.heat-grid { flex: 1 1 260px; max-width: 420px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.heat-wd { padding-bottom: 2px; text-align: center; font-size: 11.5px; color: var(--text-2); }
+.heat-cell { display: grid; place-items: center; aspect-ratio: 1; max-height: 52px; border-radius: 8px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
+.heat-cell.is-blank { visibility: hidden; }
+.heat-f { color: var(--text-3); background: transparent; outline: 1px dashed var(--border); outline-offset: -1px; }
+.heat-0 { background: var(--surface-2); color: var(--text-2); }
+.heat-1 { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.heat-2 { background: color-mix(in srgb, var(--accent) 42%, var(--surface)); }
+.heat-3 { background: color-mix(in srgb, var(--accent) 65%, var(--surface)); }
+.heat-4 { background: var(--accent); color: var(--surface); font-weight: 600; }
+.heat-cell.is-today { box-shadow: inset 0 0 0 2px var(--text); }
+.heat-side { flex: 1 1 200px; }
+.heat-max { margin: 0 0 10px; font-size: 14px; line-height: 1.45; color: var(--text-2); }
+.heat-max b { color: var(--text); font-weight: 600; }
+.heat-legend { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-2); }
+.heat-legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.heat-legend span:first-child { margin-right: 4px; }
+.heat-legend span:last-child { margin-left: 4px; }
+@media (min-width: 860px) { .ai-fab { display: grid; } }   /* на телефоне кнопка в шапке, плавающая скрыта */
+/* Тёмная тема: акцент светлый (салатовый), на насыщенных клетках цифры тёмные */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .heat-2 { background: color-mix(in srgb, var(--accent) 30%, var(--surface)); }
+  :root:not([data-theme="light"]) .heat-3 { color: var(--bg); font-weight: 600; }
+}
+:root[data-theme="dark"] .heat-2 { background: color-mix(in srgb, var(--accent) 30%, var(--surface)); }
+:root[data-theme="dark"] .heat-3 { color: var(--bg); font-weight: 600; }

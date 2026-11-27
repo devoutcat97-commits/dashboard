@@ -272,6 +272,15 @@
   }
 
   // ---------- Ползунок активной вкладки в меню ----------
+  // Подсветка пункта меню. При переходе она «тянется» как капля: передний край уходит к новому пункту,
+  // хвост догоняет (анимируем только clip-path — плавно и на слабых телефонах).
+  // На телефоне подсветка — салатовая «таблетка» под значком, на компьютере — под всей строкой.
+  var phoneNav = window.matchMedia('(max-width: 859.98px)');
+  function setBox(el, b) {
+    el.style.transform = 'translate(' + b.x + 'px,' + b.y + 'px)';
+    el.style.width = b.w + 'px';
+    el.style.height = b.h + 'px';
+  }
   function moveIndicator(nav) {
     if (!nav) return;
     var active = nav.querySelector('[aria-current="page"]');
@@ -279,9 +288,28 @@
     if (!ind) { ind = document.createElement('span'); ind.className = 'nav-ind'; nav.appendChild(ind); }
     if (!active) { ind.style.opacity = 0; return; }
     ind.style.opacity = 1;
-    ind.style.transform = 'translate(' + active.offsetLeft + 'px,' + active.offsetTop + 'px)';
-    ind.style.width = active.offsetWidth + 'px';
-    ind.style.height = active.offsetHeight + 'px';
+    var target = phoneNav.matches ? (active.querySelector('.ico') || active) : active;
+    var nr = nav.getBoundingClientRect(), tr = target.getBoundingClientRect();
+    var r = { x: Math.round(tr.left - nr.left - nav.clientLeft), y: Math.round(tr.top - nr.top - nav.clientTop), w: Math.round(tr.width), h: Math.round(tr.height) };
+    var p = ind._box;
+    ind._box = r;
+    if (ind._anim) { ind._anim.cancel(); ind._anim = null; }
+    ind.style.clipPath = '';
+    if (!p || reduced.matches || !ind.animate || (Math.abs(p.x - r.x) < 2 && Math.abs(p.y - r.y) < 2)) { setBox(ind, r); return; }
+    // Общая рамка, накрывающая старый и новый пункт; внутри неё режем видимую часть.
+    var u = { x: Math.min(p.x, r.x), y: Math.min(p.y, r.y) };
+    u.w = Math.max(p.x + p.w, r.x + r.w) - u.x;
+    u.h = Math.max(p.y + p.h, r.y + r.h) - u.y;
+    var rad = parseFloat(getComputedStyle(ind).borderTopLeftRadius) || 12;
+    function cut(b) { return 'inset(' + (b.y - u.y) + 'px ' + (u.x + u.w - b.x - b.w) + 'px ' + (u.y + u.h - b.y - b.h) + 'px ' + (b.x - u.x) + 'px round ' + rad + 'px)'; }
+    setBox(ind, u);
+    ind._anim = ind.animate([
+      { clipPath: cut(p), easing: 'cubic-bezier(.55, 0, .8, .4)' },
+      { clipPath: cut(u), offset: 0.42, easing: 'cubic-bezier(.2, .9, .3, 1)' },
+      { clipPath: cut(r) }
+    ], { duration: 460, fill: 'forwards' });
+    var anim = ind._anim;
+    anim.onfinish = function () { if (ind._anim === anim) { setBox(ind, r); anim.cancel(); ind._anim = null; } };
   }
 
   window.FX = {

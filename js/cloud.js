@@ -313,7 +313,7 @@
     });
     saveSynced();
     if (changedHere) Store._replace(fromParts(final));
-    if (!known && merged) U.toast('Данные этого устройства объединены с облаком ☁️');
+    if (!known && merged) U.toast('Данные этого устройства объединены с облаком');
     push();
   }
 
@@ -332,7 +332,7 @@
     Object.keys(remote).forEach(function (k) { synced[k] = hash(remote[k]); base[k] = remote[k]; });
     saveSynced();
     Store._replace(fromParts(remote));
-    U.toast('Данные загружены из облака ☁️');
+    U.toast('Данные загружены из облака');
   }
 
   // Изменения из облака, пришедшие во время работы.

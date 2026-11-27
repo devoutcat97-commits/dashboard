@@ -295,6 +295,7 @@
         tile('Расходы', U.money(exp)) +
         tile('Итог месяца', U.signed(inc - exp)) +
       '</div>' +
+      heatHtml(key, list) +
       accountsHtml() +
       forecastHtml(key, list, b) +
       (key === currentMonth() ? cashbackHtml() : '') +
@@ -393,7 +394,7 @@
         tile('Расходы', U.money(exp), delta(exp, pExp, true)) +
         tile('Итог месяца', U.signed(inc - exp), rate === null ? '' : rate >= 0 ? 'сохранено ' + rate + '% доходов' : 'расходы больше доходов на ' + Math.abs(rate) + '%') +
         (saved >= 0
-          ? tile('Отложено в копилки', U.money(saved), saved > 0 ? 'молодец! 🐷' : 'в этом месяце не откладывал')
+          ? tile('Отложено в копилки', U.money(saved), saved > 0 ? 'молодец' : 'в этом месяце не откладывал')
           : tile('Взято из копилок', U.money(-saved), 'больше, чем отложено')) +
       '</div>';
 
@@ -432,10 +433,10 @@
     list.forEach(function (t) { if (t.type === 'expense') wd[U.toDate(t.date).getDay()] += t.amount; });
     var WDN = ['воскресенье', 'понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу'];
     var facts = [
-      '📅 В среднем ' + U.money(Math.round(exp / n)) + ' в день',
-      '🌱 Дней без трат: ' + zero + ' из ' + n,
-      daily[maxDay] ? '🔥 Самый дорогой день — ' + (maxDay + 1) + ' ' + U.monthGen(key) + ' (' + U.money(daily[maxDay]) + ')' : '',
-      exp ? '🛍️ Чаще всего тратишь в ' + WDN[wd.indexOf(Math.max.apply(null, wd))] : ''
+      'В среднем ' + U.money(Math.round(exp / n)) + ' в день',
+      'Дней без трат: ' + zero + ' из ' + n,
+      daily[maxDay] ? 'Самый дорогой день — ' + (maxDay + 1) + ' ' + U.monthGen(key) + ' (' + U.money(daily[maxDay]) + ')' : '',
+      exp ? 'Чаще всего тратишь в ' + WDN[wd.indexOf(Math.max.apply(null, wd))] : ''
     ].filter(Boolean).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('');
 
     return (
@@ -604,6 +605,30 @@
       arr[d - 1] = U.round2(arr[d - 1] + t.amount);
     });
     return arr;
+  }
+
+  // --- Тепловая карта: день месяца — клетка, чем больше потрачено, тем насыщеннее ---
+  function heatHtml(key, list) {
+    var days = dailySums(key, list, true);
+    if (!days.some(Boolean)) return '';
+    var spent = days.filter(Boolean).sort(function (a, b) { return a - b; });
+    var q = function (p) { return spent[Math.min(spent.length - 1, Math.floor(p * spent.length))]; };
+    var t1 = q(0.25), t2 = q(0.5), t3 = q(0.8);
+    var today = U.today(), cells = '';
+    for (var i = 0, lead = (U.toDate(key + '-01').getDay() + 6) % 7; i < lead; i++) cells += '<span class="heat-cell is-blank"></span>';
+    days.forEach(function (v, d) {
+      var iso = key + '-' + U.pad(d + 1);
+      var future = iso > today;
+      var lvl = future ? 'f' : !v ? 0 : v <= t1 ? 1 : v <= t2 ? 2 : v <= t3 ? 3 : 4;
+      var label = (d + 1) + ' ' + U.monthGen(iso) + ': ' + (future ? 'ещё впереди' : v ? U.money(v) : 'без трат');
+      cells += '<span class="heat-cell heat-' + lvl + (iso === today ? ' is-today' : '') + '" role="img" aria-label="' + esc(label) + '" data-tip="' + esc(label) + '">' + (d + 1) + '</span>';
+    });
+    var max = Math.max.apply(null, days), maxDay = days.indexOf(max) + 1;
+    return '<section class="card heat-card"><div class="card-head"><h2>Траты по дням</h2></div>' +
+      '<div class="heat-wrap"><div class="heat-grid">' + ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map(function (w) { return '<span class="heat-wd">' + w + '</span>'; }).join('') + cells + '</div>' +
+      '<div class="heat-side"><p class="heat-max">Самый дорогой день — <b>' + maxDay + ' ' + U.monthGen(key) + '</b>, ' + U.money(max) + '</p>' +
+      '<div class="heat-legend"><span>меньше</span>' + [0, 1, 2, 3, 4].map(function (l) { return '<i class="heat-' + l + '"></i>'; }).join('') + '<span>больше</span></div></div></div>' +
+    '</section>';
   }
 
   // --- Расход бюджета: накопленные траты против ровного темпа ---
@@ -842,7 +867,7 @@
 
     var subs = subscriptionCandidates();
     var subsCard = subs.length
-      ? '<section class="card subs-card"><div class="card-head"><h2>🔎 Похоже на регулярные платежи</h2></div>' +
+      ? '<section class="card subs-card"><div class="card-head"><h2>Похоже на регулярные платежи</h2></div>' +
           '<ul class="plan-list">' + subs.map(function (s) {
             return '<li class="plan-row">' + catIcon(s.category) +
               '<span class="plan-main"><span class="tx-title">' + esc(s.name) + '</span><span class="tx-sub">≈ ' + U.money(s.amount) + ' · около ' + s.day + '-го · ' +
@@ -910,12 +935,12 @@
     if (days <= 0) return '<p class="piggy-plan is-late">Дата цели (' + when + ') уже прошла — можно перенести её.</p>';
     var need = target - saved;
     var months = Math.max(1, days / 30.44), weeks = Math.max(1, days / 7);
-    return '<p class="piggy-plan">🎯 Чтобы накопить к ' + when + ', откладывай ≈ <b>' + U.money(Math.ceil(need / months / 10) * 10) + '</b> в месяц' +
+    return '<p class="piggy-plan">Чтобы накопить к ' + when + ', откладывай ≈ <b>' + U.money(Math.ceil(need / months / 10) * 10) + '</b> в месяц' +
       (days > 14 ? ' (≈ ' + U.money(Math.ceil(need / weeks / 10) * 10) + ' в неделю)' : '') + '</p>';
   }
 
   // ---------- Вишлист ----------
-  var PRIORITY = { '1': '🔥 очень хочу', '2': '👍 хочу', '3': '💭 когда-нибудь' };
+  var PRIORITY = { '1': 'очень хочу', '2': 'хочу', '3': 'когда-нибудь' };
 
   function wishlistHtml() {
     var items = Store.list('wishlist');
@@ -936,7 +961,7 @@
           '<div class="wish-meta"><span class="wish-prio">' + esc(PRIORITY[w.priority || '2']) + '</span>' +
             (price ? (afford ? '<span class="status status--good">' + I.check + 'хватает на «' + esc(main.name) + '»</span>' : '<span class="muted">пока не хватает ' + U.money(price - Math.max(0, mainBal)) + '</span>') : '') + '</div>' +
           '<div class="goal-foot">' +
-            '<button type="button" class="btn btn-small" data-action="wish-save" data-id="' + w.id + '">🐷 Копить</button>' +
+            '<button type="button" class="btn btn-small" data-action="wish-save" data-id="' + w.id + '">Копить</button>' +
             '<button type="button" class="btn btn-small btn-primary" data-action="wish-buy" data-id="' + w.id + '">Куплено</button>' +
           '</div>' +
         '</div>'
@@ -1099,7 +1124,7 @@
           ? { type: 'transfer', amount: amount, account: v.account, to: id, date: v.date, note: (v.note || '').trim(), category: '', sub: '' }
           : { type: 'transfer', amount: amount, account: id, to: v.account, date: v.date, note: (v.note || '').trim(), category: '', sub: '' });
         var after = U.round2(before + (dir === 'give' ? amount : -amount));
-        if (before !== 0 && after === 0) { if (window.FX) FX.confetti(); U.toast('С ' + p.name + ' в расчёте! 🤝'); }
+        if (before !== 0 && after === 0) { if (window.FX) FX.confetti(); U.toast('С ' + p.name + ' в расчёте'); }
         else U.toast('Записано');
       }
     });
@@ -1122,7 +1147,7 @@
     Store.add('transactions', { type: 'transfer', amount: sum, account: t.account, to: r.piggy, date: U.today(), note: 'Отложено с дохода: ' + (t.note || groupName(t.category)), category: '', sub: '' });
     Store.update('transactions', t.id, { saveDone: 'saved' });
     if (window.FX) FX.sparkle(document.querySelector('.save-card') || document.body);
-    U.toast('В «' + accName(r.piggy) + '» отложено ' + U.money(sum) + ' 🐷');
+    U.toast('В «' + accName(r.piggy) + '» отложено ' + U.money(sum));
   }
 
   // Предложить отложить сразу после записи дохода (кнопка в уведомлении).
@@ -1150,7 +1175,7 @@
     var toSave = list.reduce(function (s, t) { return s + suggestSave(t.amount); }, 0);
     return (
       '<section class="card save-card">' +
-        '<div class="card-head"><h2>🐷 Распределить доходы</h2><span class="muted">правило: ' + r.percent + '% в «' + esc(accName(r.piggy)) + '»</span></div>' +
+        '<div class="card-head"><h2>Распределить доходы</h2><span class="muted">правило: ' + r.percent + '% в «' + esc(accName(r.piggy)) + '»</span></div>' +
         '<ul class="plan-list">' + list.slice(0, 5).map(function (t) {
           var s = suggestSave(t.amount);
           return '<li class="plan-row">' + catIcon(t.category) +
@@ -1185,9 +1210,9 @@
       var pct = budget ? spent / budget : 0;
       var days = t.from && t.to ? Math.round((U.toDate(t.to) - U.toDate(t.from)) / 864e5) + 1 : 0;
       var status, active = false, past = false;
-      if (t.from && today < t.from) { var n = Math.round((U.toDate(t.from) - U.toDate(today)) / 864e5); status = '✈️ через ' + n + ' ' + U.plural(n, 'день', 'дня', 'дней'); }
-      else if (t.to && today > t.to) { status = '🏁 поездка прошла'; past = true; }
-      else { active = true; var k = Math.round((U.toDate(today) - U.toDate(t.from)) / 864e5) + 1; status = '🌍 идёт · день ' + k + ' из ' + days; }
+      if (t.from && today < t.from) { var n = Math.round((U.toDate(t.from) - U.toDate(today)) / 864e5); status = 'через ' + n + ' ' + U.plural(n, 'день', 'дня', 'дней'); }
+      else if (t.to && today > t.to) { status = 'поездка прошла'; past = true; }
+      else { active = true; var k = Math.round((U.toDate(today) - U.toDate(t.from)) / 864e5) + 1; status = 'идёт · день ' + k + ' из ' + days; }
       var left = U.round2(budget - spent);
       var daysLeft = active ? Math.round((U.toDate(t.to) - U.toDate(today)) / 864e5) + 1 : past ? 0 : days;
       var perDay = budget && daysLeft ? Math.max(0, Math.floor(left / daysLeft)) : 0;
@@ -1214,7 +1239,7 @@
       );
     }).join('');
     return (
-      '<div class="section-row"><h2 class="section-title">✈️ Поездки</h2><button type="button" class="btn btn-ghost" data-action="add-trip">' + I.plus + 'Поездка</button></div>' +
+      '<div class="section-row"><h2 class="section-title">' + U.icon('plane') + 'Поездки</h2><button type="button" class="btn btn-ghost" data-action="add-trip">' + I.plus + 'Поездка</button></div>' +
       (cards ? '<div class="goals">' + cards + '</div>'
         : U.empty({ emoji: '🧳', title: 'Поездок пока нет', text: 'Заведи поездку с датами и бюджетом — траты за эти дни соберутся сами, а суммы в валюте пересчитаются в рубли.', action: 'Добавить поездку', attr: 'data-action="add-trip"' }))
     );
@@ -1311,7 +1336,7 @@
         if (a >= 1000 && c > t * 1.4 && c - t >= 1500) out.push({ emoji: '📈', level: 'warn', text: groupName(id) + ': уже ' + U.money(Math.round(c)) + ' — обычно к ' + day + '-му числу ≈ ' + U.money(Math.round(t / 10) * 10) + ', а за весь месяц ≈ ' + U.money(Math.round(a / 10) * 10) });
         else if (a >= 1500 && day >= 15 && day - lastDay <= 3 && c < t * 0.6) less.push(groupName(id));
       });
-      if (less.length) out.push({ emoji: '📉', level: 'good', text: 'Меньше обычного: ' + less.join(', ') + ' — так держать!' });
+      if (less.length) out.push({ emoji: '📉', level: 'good', text: 'Меньше обычного: ' + less.join(', ') + ' — так держать' });
     }
     // Необычно крупная трата за 14 дней: втрое больше обычной траты в этой категории.
     var since90 = U.iso(new Date(Date.now() - 90 * 864e5)), since14 = U.iso(new Date(Date.now() - 14 * 864e5));
@@ -1332,8 +1357,8 @@
   function insightsHtml() {
     var list = insights();
     if (!list.length) return '';
-    return '<section class="card insights"><div class="card-head"><h2>🔍 Дашборд заметил</h2></div><ul class="facts">' +
-      list.map(function (i) { return '<li class="ins ins--' + i.level + '">' + i.emoji + ' ' + esc(i.text) + '</li>'; }).join('') + '</ul></section>';
+    return '<section class="card insights"><div class="card-head"><h2>Дашборд заметил</h2></div><ul class="facts">' +
+      list.map(function (i) { return '<li class="ins ins--' + i.level + '">' + U.emo(i.emoji) + ' ' + esc(i.text) + '</li>'; }).join('') + '</ul></section>';
   }
 
   // Тренд одной категории за полгода (для «Итогов»)
@@ -1378,11 +1403,11 @@
     var prevVal = vals[vals.length - 2];
     charts.capital = { values: vals, labels: keys.map(U.monthShort), xTicks: [0, 1, 2, 3, 4, 5], label: 'Капитал по месяцам', height: 160,
       tips: keys.map(function (k, j) { return U.monthTitle(k) + '\nВсего: ' + U.money(vals[j]); }) };
-    return chartCard('💎 Капитал', 'всё, что у тебя есть',
+    return chartCard('Капитал', 'всё, что у тебя есть',
       '<div class="capital-top"><span class="forecast-value">' + U.money(totalNow) + '</span>' +
         (prevVal ? '<span class="delta ' + (totalNow >= prevVal ? 'delta--good' : 'delta--bad') + '">' + U.signed(totalNow - prevVal) + ' за месяц</span>' : '') + '</div>' +
-      '<div class="capital-parts"><span>💳 на счетах ' + U.money(onCards) + '</span><span>🐷 в копилках ' + U.money(inPig) + '</span>' +
-        (Math.abs(debtNet) > 0.009 ? '<span>🤝 долги ' + U.signed(debtNet) + '</span>' : '') + '</div>' +
+      '<div class="capital-parts"><span>на счетах ' + U.money(onCards) + '</span><span>в копилках ' + U.money(inPig) + '</span>' +
+        (Math.abs(debtNet) > 0.009 ? '<span>долги ' + U.signed(debtNet) + '</span>' : '') + '</div>' +
       '<div class="chart" data-chart="capital"></div>');
   }
 
@@ -1391,7 +1416,7 @@
     if (!rate || saved <= 0) return rate ? '' : '<p class="piggy-plan muted">Укажи ставку накопительного счёта — посчитаю проценты.</p>';
     var month = U.round2(saved * rate / 100 / 12);
     var year = U.round2(saved * (Math.pow(1 + rate / 100 / 12, 12) - 1));
-    return '<p class="piggy-plan">📈 ' + U.num(rate) + '% годовых: ≈ <b>' + U.money(Math.round(month)) + '</b> в месяц, ≈ ' + U.money(Math.round(year)) + ' за год' +
+    return '<p class="piggy-plan">' + U.num(rate) + '% годовых: ≈ <b>' + U.money(Math.round(month)) + '</b> в месяц, ≈ ' + U.money(Math.round(year)) + ' за год' +
       ' · <button type="button" class="link-btn" data-action="piggy-interest" data-id="' + p.id + '">начислить за месяц</button></p>';
   }
 
@@ -1465,7 +1490,7 @@
         '<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-action="cb-save">Я выбрал эти категории</button></div>';
     return (
       '<section class="card cashback">' +
-        '<div class="card-head"><h2>💳 Кэшбэк Т-Банка</h2><span class="muted">за ' + year + ' получено ' + U.money(gotYear) + '</span></div>' +
+        '<div class="card-head"><h2>Кэшбэк Т-Банка</h2><span class="muted">за ' + year + ' получено ' + U.money(gotYear) + '</span></div>' +
         (stats.length ? body : '<p class="chart-empty">Появится, когда в истории будут траты по категориям.</p>') +
       '</section>'
     );
@@ -1515,7 +1540,7 @@
     var w = weekly();
     if (!w) {
       var sug = weeklySuggest();
-      return '<section class="card weekly"><div class="card-head"><h2>🗓️ Бюджет на неделю</h2></div>' +
+      return '<section class="card weekly"><div class="card-head"><h2>Бюджет на неделю</h2></div>' +
         '<p class="hero-meta">Лимит на повседневное (еда, транспорт, развлечения, быт, красота) — каждый понедельник заново. Держаться неделю легче, чем месяц.</p>' +
         (sug ? '<button type="button" class="btn btn-small btn-primary" data-action="weekly-set" data-amount="' + sug + '">Поставить ' + U.money(sug) + ' в неделю (по твоим тратам)</button>'
              : '<button type="button" class="btn btn-small" data-action="goto-settings">Задать в настройках</button>') + '</section>';
@@ -1566,8 +1591,8 @@
     var review = recs.filter(function (r) { return r.review; }).length;
     var first = added[0];
     U.toast(recs.length === 1
-      ? '💳 ' + (first.type === 'income' ? '+' : '−') + U.money(first.amount) + ' · ' + (first.note || '') + (first.review ? ' — проверь категорию' : '')
-      : '💳 Записано из уведомлений: ' + recs.length + (review ? ', разобрать: ' + review : ''));
+      ? (first.type === 'income' ? '+' : '−') + U.money(first.amount) + ' · ' + (first.note || '') + (first.review ? ' — проверь категорию' : '')
+      : 'Записано из уведомлений: ' + recs.length + (review ? ', разобрать: ' + review : ''));
     recs.forEach(function (r) { if (r.type === 'expense') warnLater(r.category); });
     added.forEach(function (r) { if (r.type === 'income') offerSave(r); });
     return { added: recs.length, skipped: skipped };
@@ -1591,7 +1616,7 @@
     }).join('');
     return (
       '<section class="card review-card">' +
-        '<div class="card-head"><h2>🧾 Разобрать · ' + list.length + '</h2>' +
+        '<div class="card-head"><h2>Разобрать · ' + list.length + '</h2>' +
           '<button type="button" class="btn btn-small" data-action="review-all">Всё верно</button></div>' +
         '<p class="field-hint">Эти операции пришли из уведомлений банка или из выписки, но дашборд не уверен в категории. Нажми на строку, чтобы поправить, — он запомнит выбор.</p>' +
         '<ul class="plan-list">' + rows + '</ul>' +
@@ -1653,12 +1678,12 @@
     if (lim) {
       var spent = U.round2(list.reduce(function (s, t) { return s + (t.type === 'expense' && t.category === category ? t.amount : 0); }, 0));
       var pct = Math.round(spent / lim * 100);
-      if (pct >= 100) return '⛔ ' + groupName(category) + ': лимит превышен — ' + U.money(spent) + ' из ' + U.money(lim);
-      if (pct >= 80) return '⚠️ ' + groupName(category) + ': уже ' + pct + '% лимита (' + U.money(spent) + ' из ' + U.money(lim) + ')';
+      if (pct >= 100) return groupName(category) + ': лимит превышен — ' + U.money(spent) + ' из ' + U.money(lim);
+      if (pct >= 80) return groupName(category) + ': уже ' + pct + '% лимита (' + U.money(spent) + ' из ' + U.money(lim) + ')';
     }
     if (b.total) {
       var p2 = Math.round(budgetSpent(list) / b.total * 100);
-      if (p2 >= 80) return '⚠️ Потрачено ' + p2 + '% месячного бюджета';
+      if (p2 >= 80) return 'Потрачено ' + p2 + '% месячного бюджета';
     }
     return '';
   }
@@ -1695,7 +1720,7 @@
     if (days <= 7 || Store.getSetting('money.freshHidden', '') === last) return '';
     return (
       '<div class="card banner">' +
-        '<span class="banner-emoji">📄</span>' +
+        '<span class="banner-emoji">' + U.icon('file') + '</span>' +
         '<div class="banner-main"><b>Последняя выписка — по ' + U.toDate(last).getDate() + ' ' + U.monthGen(last) + '</b>' +
           '<span>Прошло ' + days + ' ' + U.plural(days, 'день', 'дня', 'дней') + '. Загрузи свежую — или просто перетащи PDF в окно дашборда.</span></div>' +
         '<button type="button" class="btn btn-small btn-primary" data-action="import">Загрузить</button>' +
@@ -1881,7 +1906,7 @@
         A.push({ id: 'p' + U.uid(), name: w.title, kind: 'piggy', target: Number(w.price) || 0, targetDate: '', start: 0 });
         Store.setSetting('money.accounts.v2', A);
         state.view = 'plans';
-        U.toast('Копилка «' + w.title + '» создана — пополняй её в «Планах» 🐷');
+        U.toast('Копилка «' + w.title + '» создана — пополняй её в «Планах»');
         break;
       }
       case 'wish-buy': {
@@ -1918,7 +1943,7 @@
       case 'cb-save':
         if (!state.cbSel || !state.cbSel.length) { U.toast('Отметь хотя бы одну категорию'); break; }
         Store.setSetting('money.cashback', { month: currentMonth(), cats: state.cbSel.slice() });
-        U.toast('Запомнил выбор кэшбэка на месяц 💳'); break;
+        U.toast('Запомнил выбор кэшбэка на месяц'); break;
       case 'cb-change': {
         var cb = Store.getSetting('money.cashback', {}) || {};
         state.cbSel = (cb.cats || []).slice();
@@ -2083,7 +2108,7 @@
         f.push({ name: 'date', type: 'date', label: 'Дата', half: true });
         f.push({ name: 'note', type: 'text', label: 'Комментарий', placeholder: 'Необязательно', maxlength: 140 });
         if (!editing && v.type === 'expense') {
-          f.push({ name: 'split', type: 'text', label: '👥 Разделить с друзьями (необязательно)', placeholder: 'Имена через запятую: Саша, Лена', maxlength: 120 });
+          f.push({ name: 'split', type: 'text', label: 'Разделить с друзьями (необязательно)', placeholder: 'Имена через запятую: Саша, Лена', maxlength: 120 });
           f.push({ type: 'hint', text: 'Сумма делится поровну: в расходы пойдёт только твоя доля, а на друзей запишутся долги в разделе «Долги».' });
         }
         return f;
@@ -2264,7 +2289,7 @@
         var target = Number(p.target) || 0;
         if (dir === 'in' && target && saved < target && saved + amount >= target) {
           if (window.FX) FX.confetti();
-          U.toast('Цель «' + p.name + '» достигнута! 🎉');
+          U.toast('Цель «' + p.name + '» достигнута 🎉');
         } else {
           U.toast(dir === 'in' ? 'В копилку отложено ' + U.money(amount) : 'Из копилки снято ' + U.money(amount));
         }
@@ -2825,7 +2850,7 @@
     if (show && !dropOverlay) {
       dropOverlay = document.createElement('div');
       dropOverlay.className = 'drop-overlay';
-      dropOverlay.innerHTML = '<div class="drop-box"><span class="drop-emoji">📄</span><b>Отпусти, чтобы загрузить выписку</b><span>Выписка или справка о движении средств Т-Банка (PDF), либо CSV</span></div>';
+      dropOverlay.innerHTML = '<div class="drop-box"><span class="drop-emoji">' + U.icon('file') + '</span><b>Отпусти, чтобы загрузить выписку</b><span>Выписка или справка о движении средств Т-Банка (PDF), либо CSV</span></div>';
       document.body.appendChild(dropOverlay);
     }
     if (dropOverlay) dropOverlay.classList.toggle('is-on', !!show);
