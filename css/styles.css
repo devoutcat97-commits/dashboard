@@ -1553,7 +1553,7 @@ dialog.sheet.cmd { width: min(640px, calc(100% - 24px)); margin: 10vh auto auto;
 .cmd-row.is-sel { background: var(--accent-soft); }
 .cmd-emoji { width: 28px; flex: none; font-size: 20px; text-align: center; }
 .cmd-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cmd-title { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-title { font-weight: 550; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; line-height: 1.3; }   /* сумма в конце строки не должна пропадать */
 .cmd-sub { font-size: 12.5px; color: var(--text-3); }
 kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 11px; color: var(--text-3); cursor: pointer; }
 .cmd-hint { padding: 10px 12px; font-size: 14px; color: var(--text-2); }
@@ -2369,3 +2369,67 @@ kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; fon
 .ag-item .move-date { align-self: center; margin-left: 6px; }
 .dl-more { margin-top: 10px; }
 .ag-item:has(.move-date) .ag-meta { white-space: normal; }   /* рядом кнопка-календарь — дату не обрезаем */
+
+/* ============================================================
+   Таймер фокуса (js/focus.js)
+   ============================================================ */
+.focus-body { padding: 8px 20px 20px; }
+.focus-cats { margin-bottom: 14px; }
+.focus-durs { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.focus-durs .btn { flex: 1 1 0; justify-content: center; min-width: 88px; }
+.focus-ring { position: relative; width: min(240px, 70vw); aspect-ratio: 1; margin: 8px auto 18px; display: grid; place-items: center; align-content: center; text-align: center; }
+.focus-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.focus-track { fill: none; stroke: var(--surface-2); stroke-width: 9; }
+.focus-bar { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 100; transition: stroke-dashoffset 1s linear; }
+.focus-ring.is-break .focus-bar { stroke: var(--good); }
+.focus-time { position: relative; font-family: var(--font-num); font-size: clamp(40px, 13vw, 56px); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1.1; }
+.focus-what { position: relative; margin-top: 4px; font-size: 14px; color: var(--text-2); }
+.focus-ring.is-paused .focus-time { opacity: .55; }
+.focus-actions { display: flex; gap: 8px; }
+.focus-actions .btn { flex: 1 1 0; justify-content: center; }
+.focus-done { margin: 4px 0 16px; font-size: 16px; line-height: 1.45; }
+.focus-pill {
+  position: fixed; z-index: 40; left: 16px; bottom: calc(var(--tabbar-h) + 14px + env(safe-area-inset-bottom));
+  max-width: calc(100% - 96px); padding: 9px 14px; border: 0; border-radius: 999px;
+  background: var(--hero); color: var(--hero-ink); font: inherit; font-size: 13.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .22); cursor: pointer;
+}
+@media (min-width: 860px) { .focus-pill { left: 272px; bottom: 24px; } }
+
+/* Голосом в строке «Добавить или найти» */
+.cmd-mic { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text-2); cursor: pointer; }
+.cmd-mic .ico { width: 18px; height: 18px; color: inherit; }
+.cmd-mic.is-on { background: var(--critical); border-color: var(--critical); color: #fff; }
+@media (prefers-reduced-motion: no-preference) { .cmd-mic.is-on { animation: cloud-pulse 1.2s ease-in-out infinite; } }
+
+/* Быстрые кнопки: на телефоне — лента с прокруткой (следующая плитка выглядывает с края) */
+@media (max-width: 859.98px) {
+  .qa { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 24px) / 4.4); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; overscroll-behavior-x: contain; }
+  .qa::-webkit-scrollbar { display: none; }
+}
+@media (min-width: 860px) { .qa { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); } }
+
+/* ============================================================
+   Нагрузка на 7 дней (Сводка)
+   ============================================================ */
+.load-card { margin-top: 12px; }
+.ld-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.ld-day { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 6px 0 8px; border: 1px solid transparent; border-radius: 14px; background: none; color: var(--text); font: inherit; cursor: pointer; }
+.ld-day.is-today { background: var(--surface-2); }
+.ld-bar { position: relative; display: flex; flex-direction: column-reverse; width: 60%; max-width: 30px; height: 84px; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.ld-day.is-today .ld-bar { background: var(--bg); }
+.ld-bar i { display: block; width: 100%; }
+.ld-lesson { background: var(--accent); }
+.ld-shift { background: #3fb59a; }
+.ld-dl { background: #f08a3e; }
+.ld-h { margin-top: 4px; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ld-day--free .ld-h { color: var(--good-text); }
+.ld-day--heavy .ld-h { color: var(--critical-text); }
+.ld-wd { font-size: 11.5px; color: var(--text-2); }
+.ld-num { font-size: 13px; font-weight: 600; }
+.ld-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--text-2); }
+.ld-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ld-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.ld-note { margin: 8px 0 0; font-size: 13px; }
+@media (hover: hover) { .ld-day:hover { border-color: var(--border); } }

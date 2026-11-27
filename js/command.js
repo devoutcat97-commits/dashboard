@@ -12,6 +12,9 @@
   var U = window.UI;
   var esc = U.esc;
   var dlg = null, input = null, list = null, options = [], sel = 0;
+  // Распознавание речи браузера (Chrome, Safari). Голос обрабатывает сервис Google или Apple.
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var rec = null;
 
   function norm(s) { return String(s || '').toLowerCase().replace(/ё/g, 'е'); }
 
@@ -150,7 +153,9 @@
     dlg.innerHTML =
       '<div class="cmd-box">' +
         '<div class="cmd-input"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>' +
-          '<input type="text" autocomplete="off" enterkeyhint="go" placeholder="Добавить или найти…" aria-label="Добавить или найти"><kbd class="cmd-esc">Esc</kbd></div>' +
+          '<input type="text" autocomplete="off" enterkeyhint="go" placeholder="Добавить или найти…" aria-label="Добавить или найти">' +
+          (SR ? '<button type="button" class="cmd-mic" aria-label="Сказать голосом" data-tip="Сказать голосом">' + MIC + '</button>' : '') +
+          '<kbd class="cmd-esc">Esc</kbd></div>' +
         '<div class="cmd-list"></div>' +
       '</div>';
     input = dlg.querySelector('input');
@@ -166,12 +171,49 @@
       var b = e.target.closest('.cmd-row');
       if (b) runOption(+b.dataset.i);
     });
-    dlg.addEventListener('click', function (e) { if (e.target === dlg || e.target.classList.contains('cmd-esc')) dlg.close(); });
-    dlg.addEventListener('close', function () { dlg.remove(); dlg = null; });
+    dlg.addEventListener('click', function (e) {
+      if (e.target === dlg || e.target.classList.contains('cmd-esc')) dlg.close();
+      else if (e.target.closest('.cmd-mic')) listen();
+    });
+    dlg.addEventListener('close', function () { if (rec) rec.abort(); dlg.remove(); dlg = null; });
     document.body.appendChild(dlg);
     dlg.showModal();
     draw();
     input.focus();
+  }
+
+  // ---------- Голосом ----------
+  var MIC = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
+  // «такси 450 рублей» → «такси 450»: разборщики ждут просто число.
+  function cleanSpeech(t) { return t.replace(/\s*(рубл[а-я]*|руб\.?|₽)(?=\s|$)/gi, '').replace(/\s+/g, ' ').trim(); }
+  function listen() {
+    if (!SR || !dlg) return;
+    if (rec) { rec.stop(); return; }
+    var mic = dlg.querySelector('.cmd-mic');
+    rec = new SR();
+    rec.lang = 'ru-RU';
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    var heard = '';
+    rec.onresult = function (e) {
+      heard = Array.prototype.map.call(e.results, function (r) { return r[0].transcript; }).join(' ');
+      input.value = cleanSpeech(heard);
+      sel = 0;
+      draw();
+    };
+    rec.onerror = function (e) {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') U.toast('Нет доступа к микрофону — разреши его в настройках браузера');
+      else if (e.error === 'no-speech') U.toast('Ничего не слышно — попробуй ещё раз');
+      else if (e.error !== 'aborted') U.toast('Не получилось распознать: ' + e.error);
+    };
+    rec.onend = function () {
+      rec = null;
+      if (mic) { mic.classList.remove('is-on'); mic.setAttribute('aria-label', 'Сказать голосом'); }
+      if (input) input.focus();
+    };
+    try { rec.start(); } catch (e) { rec = null; return; }
+    if (mic) { mic.classList.add('is-on'); mic.setAttribute('aria-label', 'Остановить запись'); }
+    input.placeholder = 'Говори: «такси 450», «вкр 2 часа», «отчёт завтра»…';
   }
 
   function scrollSel() {
@@ -192,5 +234,9 @@
     btn.addEventListener('click', open);
   }
 
-  window.Command = { open: open, addOptions: addOptions, search: search };
+  window.Command = {
+    open: open, addOptions: addOptions, search: search,
+    canVoice: !!SR,
+    voice: function () { open(); listen(); }
+  };
 })();

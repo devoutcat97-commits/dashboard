@@ -177,7 +177,8 @@
   // Быстрые кнопки под шапкой.
   var QA = [['tx', '💸', 'Трата'], ['task', '✅', 'Задача'], ['hw', '📚', 'Задание'], ['time', '⏱️', 'Время'], ['import', '📄', 'Выписка']];
   function quickActionsHtml() {
-    return '<div class="qa">' + QA.map(function (a) {
+    var list = QA.slice(0, 2).concat(window.Focus ? [['focus', '⏳', 'Фокус']] : [], window.Command && Command.canVoice ? [['voice', '🎤', 'Голосом']] : [], QA.slice(2));
+    return '<div class="qa">' + list.map(function (a) {
       return '<button type="button" class="qa-btn" data-qa="' + a[0] + '"><span class="qa-ico">' + a[1] + '</span><span class="qa-label">' + a[2] + '</span></button>';
     }).join('') + '</div>';
   }
@@ -188,6 +189,50 @@
     else if (k === 'hw' && T.study) T.study.newHomework();
     else if (k === 'time' && T.time) T.time.newEntry();
     else if (k === 'import' && T.money) T.money.importStatement();
+    else if (k === 'focus' && window.Focus) Focus.open();
+    else if (k === 'voice' && window.Command) Command.voice();
+  }
+
+  // ============================================================
+  //  Нагрузка на 7 дней: пары, смены и сроки по дням — видно свободные и тяжёлые дни
+  // ============================================================
+  var LESSON_H = 1.5, DEADLINE_H = 1;   // примерно: пара — 1,5 ч, дело со сроком — около часа
+  function hoursBetween(a, b) { var p = function (x) { var m = String(x).split(':'); return +m[0] + (+m[1] || 0) / 60; }; return Math.max(0, p(b) - p(a)); }
+  function loadHtml(items) {
+    var today = U.today(), days = [];
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(today, i);
+      var lessons = Tabs.study && Tabs.study.lessonsOn ? Tabs.study.lessonsOn(d).length : 0;
+      var sh = Tabs.time && Tabs.time.scheduledShift ? Tabs.time.scheduledShift(d) : null;
+      var shiftH = sh ? hoursBetween(sh.start, sh.end) : 0;
+      var dl = items.filter(function (it) { return it.date === d && (it.check || it.kind === 'exam' || it.kind === 'event'); }).length;
+      days.push({ date: d, lessons: lessons, shiftH: shiftH, dl: dl, h: lessons * LESSON_H + shiftH + dl * DEADLINE_H });
+    }
+    var max = Math.max(8, Math.max.apply(null, days.map(function (x) { return x.h; })));
+    var cols = days.map(function (x) {
+      var dt = U.toDate(x.date);
+      var level = x.h === 0 ? 'free' : x.h <= 4 ? 'light' : x.h <= 8 ? 'mid' : 'heavy';
+      var parts = [];
+      if (x.lessons) parts.push(x.lessons + ' ' + U.plural(x.lessons, 'пара', 'пары', 'пар'));
+      if (x.shiftH) parts.push('смена ' + String(Math.round(x.shiftH * 10) / 10).replace('.', ',') + ' ч');
+      if (x.dl) parts.push(x.dl + ' ' + U.plural(x.dl, 'срок', 'срока', 'сроков'));
+      var label = WD_FULL[dt.getDay()] + ', ' + dt.getDate() + ': ' + (parts.join(', ') || 'свободно');
+      var seg = function (cls, h) { return h ? '<i class="ld-' + cls + '" style="height:' + (h / max * 100).toFixed(1) + '%"></i>' : ''; };
+      return '<button type="button" class="ld-day ld-day--' + level + (x.date === today ? ' is-today' : '') + '" data-ld="' + x.date + '" aria-label="' + esc(label) + '" data-tip="' + esc(label) + '">' +
+        '<span class="ld-bar">' + seg('dl', x.dl * DEADLINE_H) + seg('shift', x.shiftH) + seg('lesson', x.lessons * LESSON_H) + '</span>' +
+        '<span class="ld-h">' + (x.h ? '≈' + Math.round(x.h) + ' ч' : 'своб.') + '</span>' +
+        '<span class="ld-wd">' + (x.date === today ? 'сег.' : WD[dt.getDay()]) + '</span><span class="ld-num">' + dt.getDate() + '</span>' +
+      '</button>';
+    }).join('');
+    var heavy = days.filter(function (x) { return x.h > 8; }), free = days.filter(function (x) { return x.h === 0; });
+    var note = heavy.length ? 'Тяжёлые дни: ' + heavy.map(function (x) { return WD[U.toDate(x.date).getDay()]; }).join(', ') + '. Дела лучше сдвинуть на свободные.' :
+      free.length ? 'Свободных дней: ' + free.length + ' — хорошее время для ВКР.' : '';
+    return '<section class="card load-card">' +
+      '<div class="card-head"><h2>' + ico('<path d="M4 20V12M9 20V6M14 20v-9M19 20V9"/>') + 'Нагрузка на 7 дней</h2></div>' +
+      '<div class="ld-row">' + cols + '</div>' +
+      '<div class="ld-legend"><span><i class="ld-lesson"></i>пары</span><span><i class="ld-shift"></i>смена</span><span><i class="ld-dl"></i>сроки и экзамены</span></div>' +
+      (note ? '<p class="muted ld-note">' + esc(note) + '</p>' : '') +
+    '</section>';
   }
 
   // ============================================================
@@ -793,7 +838,7 @@
     var wrap = document.createElement('div');
     wrap.className = 'summary';
     wrap.innerHTML =
-      heroHtml(items) + quickActionsHtml() + countdownsHtml() + alertsHtml() + weekReportHtml(items) + dayEndHtml(items) +
+      heroHtml(items) + quickActionsHtml() + countdownsHtml() + alertsHtml() + weekReportHtml(items) + dayEndHtml(items) + loadHtml(items) +
       '<div class="summary-cols">' +
         '<div class="summary-col">' + todayHtml(items) + deadlinesHtml(items) + shoppingHtml() + '</div>' +
         '<div class="summary-col">' + calendarHtml(items) + moneyHtml() + (window.Achievements ? Achievements.html() : '') + '</div>' +
@@ -835,6 +880,13 @@
       var a = ev.target.closest('a[href="#summary-today"]');
       if (a) { ev.preventDefault(); var tc = wrap.querySelector('.today-card'); if (tc) tc.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       if (ev.target.closest('[data-cd-all]')) { allDatesDialog(); return; }
+      var ld = ev.target.closest('[data-ld]');
+      if (ld) {   // день на карте нагрузки → показать его в календаре
+        cal.day = ld.dataset.ld; cal.month = U.monthKey(cal.day); App.softRefresh();
+        var cc = document.querySelector('[data-cal-step]');
+        if (cc) cc.closest('.card, section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
       var dl = ev.target.closest('[data-dl-all]');
       if (dl) { showAllDeadlines = dl.dataset.dlAll === '1'; App.softRefresh(); return; }
       var b = ev.target.closest('[data-cd], [data-cd-new]');
